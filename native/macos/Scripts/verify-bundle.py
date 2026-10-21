@@ -19,6 +19,7 @@ checks = {
     'bundle_size_at_most_50_mib': size <= 50,
     'no_electron': not any('electron' in str(path.relative_to(app)).lower() for path in paths),
     'notices_present': (app / 'Contents/Resources/Licenses/THIRD_PARTY_NOTICES.md').is_file(),
+    'application_icon': info.get('CFBundleIconFile') == 'OpenMTP.icns' and (app / 'Contents/Resources/OpenMTP.icns').is_file(),
 }
 for name in ['kalam-seg5.dylib', 'libusb-seg5.dylib']:
     path = app / 'Contents/Resources/Engine' / name

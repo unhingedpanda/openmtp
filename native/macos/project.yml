@@ -16,15 +16,22 @@ targets:
     platform: macOS
     productName: OpenMTP Native
     sources: [Core, Device, Bridge, Browser, Transfers, App]
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: OpenMTP Native
+        CFBundleIconFile: OpenMTP.icns
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.utilities
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        NSHumanReadableCopyright: "OpenMTP contributors"
+        NSPrincipalClass: NSApplication
     settings:
       base:
+        GENERATE_INFOPLIST_FILE: NO
         PRODUCT_BUNDLE_IDENTIFIER: dev.yash.openmtp.native
         PRODUCT_NAME: OpenMTP Native
-        INFOPLIST_KEY_CFBundleDisplayName: OpenMTP Native
-        INFOPLIST_KEY_NSPrincipalClass: NSApplication
-        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
-        INFOPLIST_KEY_NSHumanReadableCopyright: "OpenMTP contributors"
-        INFOPLIST_KEY_CFBundleIconFile: OpenMTP.icns
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: 1
         ENABLE_APP_SANDBOX: NO

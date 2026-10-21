@@ -4,9 +4,7 @@ import AppKit
 @main struct OpenMTPNativeApp: App {
     @State private var model = AppModel()
     @NSApplicationDelegateAdaptor(AppLifecycle.self) private var lifecycle
-    init() { LaunchDiagnostics.record("app_init") }
     var body: some Scene {
-        let _ = LaunchDiagnostics.record("scene_body")
         WindowGroup("OpenMTP Native") {
             MainBrowserView(model: model)
                 .preferredColorScheme(launchColorScheme)
@@ -19,16 +17,14 @@ import AppKit
         Settings { SettingsView(preferences: model.preferences) }
     }
     private var launchColorScheme: ColorScheme? {
-        let arguments = ProcessInfo.processInfo.arguments
-        guard let index = arguments.firstIndex(of: "--appearance"), arguments.indices.contains(index + 1) else { return nil }
-        return arguments[index + 1] == "dark" ? .dark : .light
+        guard let appearance = LaunchConfiguration.current.appearance else { return nil }
+        return appearance == .dark ? .dark : .light
     }
 }
 
 struct MainBrowserView: View {
     @Bindable var model: AppModel
     var body: some View {
-        let _ = LaunchDiagnostics.record("browser_body")
         VStack(spacing: 0) {
             BrowserSplitView(model: model)
             if !model.transfers.records.isEmpty { TransferTray(queue: model.transfers) }
@@ -104,11 +100,10 @@ struct WindowConfiguration: NSViewRepresentable {
         private let closeProxy = WindowCloseProxy()
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
-            LaunchDiagnostics.record("marker_moved window=\(String(describing: window)) delegate=\(String(describing: window?.delegate))")
-            let arguments = ProcessInfo.processInfo.arguments
-            let testing = arguments.contains("--ui-testing")
+            let configuration = LaunchConfiguration.current
+            let testing = configuration.isUITesting
             window?.setFrameAutosaveName(testing ? "OpenMTPNativeTestWindow" : "OpenMTPNativeMainWindow")
-            if arguments.contains("--narrow"), let window {
+            if configuration.narrow, let window {
                 DispatchQueue.main.async { [weak window] in
                     window?.setContentSize(NSSize(width: 880, height: 640))
                     window?.center()

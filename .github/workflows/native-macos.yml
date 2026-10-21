@@ -61,7 +61,7 @@ jobs:
             'native/macos/build/release/Build/Products/Release/OpenMTP Native.app' \
             --output "$EVIDENCE/bundle-verification.json"
 
-      - name: Diagnose hosted launch with a minimal control
+      - name: Verify normal hosted app launches
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         timeout-minutes: 2
         run: |
@@ -75,18 +75,18 @@ jobs:
           app = pathlib.Path(sys.argv[1])
           (app / 'Contents/Info.plist').write_bytes(plistlib.dumps({'CFBundleExecutable': 'LaunchReference', 'CFBundleIdentifier': 'dev.yash.openmtp.launchreference', 'CFBundleName': 'Launch Reference', 'CFBundlePackageType': 'APPL', 'NSPrincipalClass': 'NSApplication'}))
           subprocess.run(['codesign', '--force', '--sign', '-', str(app)], check=True)
-          import json, shutil, tempfile
+          import json
           native = pathlib.Path('native/macos/build/release/Build/Products/Release/OpenMTP Native.app').resolve()
-          fixture = ['--directory', '/tmp/openmtp-native-fixtures/1000']
-          variants = [('reference-arguments', app, ['--ui-testing', *fixture]), ('native-default', native, []), ('native-directory', native, fixture), ('native-testing', native, ['--ui-testing']), ('native', native, ['--ui-testing', *fixture])]
-          for name, target, arguments in variants:
+          fixture = '/tmp/openmtp-native-fixtures/1000'
+          for name, target in [('reference', app), ('native', native)]:
               report = pathlib.Path(os.environ['EVIDENCE']) / (name + '-launch.json')
-              subprocess.run([os.environ['RUNNER_TEMP'] + '/window-probe', '--launch', str(target), str(report), *arguments], check=True, timeout=25)
+              subprocess.run([os.environ['RUNNER_TEMP'] + '/window-probe', '--launch', str(target), str(report), fixture], check=True, timeout=25)
               result = json.loads(report.read_text())
               print(name, result)
-              os.kill(result['pid'], signal.SIGTERM)
-          log = pathlib.Path(tempfile.gettempdir()) / 'openmtp-native-launch.log'
-          if log.exists(): shutil.copyfile(log, pathlib.Path(os.environ['EVIDENCE']) / 'app-launch.log')
+              try:
+                  if result['first_window_seconds'] is None: raise RuntimeError(name + ' did not open its first window')
+              finally:
+                  os.kill(result['pid'], signal.SIGTERM)
           PY
 
       - name: Preserve launch diagnostics immediately
@@ -96,7 +96,6 @@ jobs:
           name: launch-feedback-${{ inputs.runner || 'macos-26' }}-${{ github.run_id }}
           path: |
             native/macos/build/remote-evidence/*-launch.json
-            native/macos/build/remote-evidence/app-launch.log
           retention-days: 3
 
       - name: Run unit behavior tests
@@ -173,11 +172,6 @@ jobs:
           if test -f native/macos/build/browser-performance.json; then
             cp native/macos/build/browser-performance.json "$EVIDENCE/"
           fi
-          python3 - <<'PY'
-          import os, pathlib, shutil, tempfile
-          log = pathlib.Path(tempfile.gettempdir()) / 'openmtp-native-launch.log'
-          if log.exists(): shutil.copyfile(log, pathlib.Path(os.environ['EVIDENCE']) / 'app-launch.log')
-          PY
           for suite in behavior ui browser; do
             result="$EVIDENCE/$suite.xcresult"
             if test -d "$result"; then

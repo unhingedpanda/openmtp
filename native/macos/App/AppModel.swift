@@ -44,15 +44,12 @@ import AppKit
     init(session: DeviceSession? = nil, monitorUSB: Bool = true) {
         self.session = session
         self.monitorUSB = monitorUSB
-        let arguments = ProcessInfo.processInfo.arguments
-        let testing = arguments.contains("--ui-testing")
+        let configuration = LaunchConfiguration.current
+        let testing = configuration.isUITesting
         let defaults = testing ? UserDefaults(suiteName: "dev.yash.openmtp.native.uitests")! : .standard
         if testing { defaults.removePersistentDomain(forName: "dev.yash.openmtp.native.uitests") }
         preferences = BrowserPreferences(defaults: defaults)
-        let root: URL
-        if let index = arguments.firstIndex(of: "--directory"), arguments.indices.contains(index + 1) {
-            root = URL(fileURLWithPath: arguments[index + 1])
-        } else { root = FileManager.default.homeDirectoryForCurrentUser }
+        let root = configuration.directory ?? FileManager.default.homeDirectoryForCurrentUser
         let local = LocalFileService()
         localPane = PaneModel(kind: .local, location: .local(root)) { location in
             guard case .local(let url) = location else { throw DeviceError.stale }

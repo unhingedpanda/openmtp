@@ -84,7 +84,7 @@ struct BrowserSplitView: NSViewRepresentable {
         let split = NSSplitView()
         split.isVertical = true
         split.dividerStyle = .thin
-        split.autosaveName = ProcessInfo.processInfo.arguments.contains("--ui-testing") ? "OpenMTPNativeTestSplit" : "OpenMTPNativeBrowserSplit"
+        split.autosaveName = LaunchConfiguration.current.isUITesting ? "OpenMTPNativeTestSplit" : "OpenMTPNativeBrowserSplit"
         for _ in 0..<2 {
             let host = NSHostingView(rootView: BrowserPane(pane: model.localPane, model: model))
             host.sizingOptions = []

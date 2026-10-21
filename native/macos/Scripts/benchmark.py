@@ -57,7 +57,7 @@ def launch():
     process = None
     try:
         with a.output.with_suffix('.launch.log').open('a') as log:
-            subprocess.run([str(probe), '--launch', str(app), str(report_file), '--ui-testing', '--directory', str(a.fixture.resolve())], stdout=subprocess.DEVNULL, stderr=log, check=True, timeout=25)
+            subprocess.run([str(probe), '--launch', str(app), str(report_file), str(a.fixture.resolve())], stdout=subprocess.DEVNULL, stderr=log, check=True, timeout=25)
         report = json.loads(report_file.read_text())
         process = OwnedApplication(report['pid'])
         if report['first_window_seconds'] is None:
