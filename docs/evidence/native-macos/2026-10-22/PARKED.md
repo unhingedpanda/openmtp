@@ -1,7 +1,9 @@
 # Native OpenMTP checkpoint
 
-Status: parked on 2026-10-22 at the user's request.
-All tests, benchmarks, app launches, and UI automation remain paused until the user explicitly resumes them.
+Status: remote verification resumed on 2026-10-22 at the user's request.
+Desktop automation on the user's Mac remains paused.
+See [REMOTE.md](REMOTE.md) for the authorized remote execution boundary.
+The following record preserves the original parking checkpoint.
 Saving this checkpoint did not run tests or launch the app.
 
 ## Saved implementation

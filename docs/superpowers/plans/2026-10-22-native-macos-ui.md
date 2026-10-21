@@ -20,7 +20,8 @@
 - Native source boundary: `native/macos/` inside this checkout.
 - Keep the installed `/Applications/OpenMTP.app` untouched.
 - Keep existing Electron sources and Go sources untouched during the port.
-- Do not publish, push, install over OpenMTP, or claim upstream endorsement.
+- Publish only to the user's public fork for authorized remote verification.
+- Do not install over OpenMTP or claim upstream endorsement.
 - Label the control `Stop after current item`.
 - Immediate cancellation requires separate backend design and is outside this port.
 - Keep blocking USB operations off the main thread.
@@ -30,6 +31,9 @@
 - Mark all unavailable hardware checks as unverified.
 
 The specification's performance targets remain acceptance targets throughout execution.
+The user authorized public-fork remote verification on 2026-10-22 after parking the initial implementation.
+Desktop automation on the user's Mac remains disabled.
+Remote measurements do not establish performance on the user's Mac.
 Do not silently relax them when measurements miss them.
 Use system controls and the approved Apple appearance without adding product features.
 Preserve the existing source licenses and bundled dependency notices.

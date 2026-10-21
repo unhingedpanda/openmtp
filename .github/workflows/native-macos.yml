@@ -1,0 +1,115 @@
+name: Native macOS verification
+
+on:
+  push:
+    branches: [codex/native-macos-ui]
+    paths:
+      - native/macos/**
+      - .github/workflows/native-macos.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-macos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    # Standard hosted runners are free for public repositories.
+    if: github.event.repository.private == false
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      EVIDENCE: native/macos/build/remote-evidence
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Prepare tools and fixtures
+        id: prepare
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE"
+          {
+            sw_vers
+            uname -m
+            xcodebuild -version
+            git rev-parse HEAD
+          } > "$EVIDENCE/environment.txt"
+          test "$(uname -m)" = arm64
+          if ! command -v xcodegen >/dev/null; then brew install xcodegen; fi
+          python3 native/macos/Scripts/make-fixtures.py /tmp/openmtp-native-fixtures
+          xcodegen generate --spec native/macos/project.yml
+
+      - name: Build release preview
+        id: build
+        run: |
+          set -euo pipefail
+          native/macos/Scripts/build.sh 2>&1 | tee "$EVIDENCE/release-build.log"
+          python3 native/macos/Scripts/verify-bundle.py \
+            'native/macos/build/release/Build/Products/Release/OpenMTP Native.app' \
+            --output "$EVIDENCE/bundle-verification.json"
+
+      - name: Run behavior and UI tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          xcodebuild test \
+            -project native/macos/OpenMTPNative.xcodeproj \
+            -scheme OpenMTPNative \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath native/macos/build/remote \
+            -resultBundlePath "$EVIDENCE/behavior.xcresult" \
+            -parallel-testing-enabled NO \
+            -skip-testing:OpenMTPNativeTests/BrowserPerformanceTests \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- \
+            2>&1 | tee "$EVIDENCE/behavior-tests.log"
+
+      - name: Run browser performance test separately
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          xcodebuild test \
+            -project native/macos/OpenMTPNative.xcodeproj \
+            -scheme OpenMTPNative \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath native/macos/build/remote \
+            -resultBundlePath "$EVIDENCE/browser.xcresult" \
+            -parallel-testing-enabled NO \
+            -only-testing:OpenMTPNativeTests/BrowserPerformanceTests \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- \
+            2>&1 | tee "$EVIDENCE/browser-tests.log"
+
+      - name: Measure release preview on the remote Mac
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          python3 native/macos/Scripts/benchmark.py \
+            'native/macos/build/release/Build/Products/Release/OpenMTP Native.app' \
+            /tmp/openmtp-native-fixtures/1000 \
+            --output "$EVIDENCE/process-benchmark.json" \
+            2>&1 | tee "$EVIDENCE/process-benchmark.log"
+
+      - name: Collect browser measurement
+        if: always()
+        run: |
+          if test -f native/macos/build/browser-performance.json; then
+            cp native/macos/build/browser-performance.json "$EVIDENCE/"
+          fi
+
+      - name: Preserve verification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-macos-${{ github.run_id }}-${{ github.run_attempt }}
+          path: native/macos/build/remote-evidence/
+          if-no-files-found: warn
+          retention-days: 3
