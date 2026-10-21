@@ -20,6 +20,7 @@ if CommandLine.arguments[1] == "--launch" {
     configuration.createsNewApplicationInstance = true
     configuration.activates = true
     configuration.arguments = Array(CommandLine.arguments.dropFirst(4))
+    configuration.appleEvent = NSAppleEventDescriptor(eventClass: AEEventClass(kCoreEventClass), eventID: AEEventID(kAEOpenApplication), targetDescriptor: nil, returnID: AEReturnID(kAutoGenerateReturnID), transactionID: AETransactionID(kAnyTransactionID))
     // Exclude the observer's own process startup from the app launch measurement.
     let started = DispatchTime.now().uptimeNanoseconds
     NSWorkspace.shared.openApplication(at: application, configuration: configuration) { app, error in

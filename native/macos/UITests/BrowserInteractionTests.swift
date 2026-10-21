@@ -1,4 +1,5 @@
 import XCTest
+import AppKit
 
 final class BrowserInteractionTests: XCTestCase {
     @MainActor func testKeyboardActionUsesTheFocusedPane() async throws {
@@ -11,7 +12,7 @@ final class BrowserInteractionTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing", "--directory", directory.path]
         app.launch()
-        app.openNativeWindow()
+        try await app.openNativeWindow()
         defer { app.terminate() }
         guard app.windows.firstMatch.waitForExistence(timeout: 20) else { return XCTFail("The native window did not appear") }
         let table = app.tables["local-file-list"]
@@ -54,7 +55,7 @@ final class BrowserInteractionTests: XCTestCase {
 }
 
 final class PaneFocusTests: XCTestCase {
-    @MainActor func testDisconnectedPaneFocusCannotDeleteTheSelectedLocalFile() throws {
+    @MainActor func testDisconnectedPaneFocusCannotDeleteTheSelectedLocalFile() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -64,7 +65,7 @@ final class PaneFocusTests: XCTestCase {
         app.launchArguments = ["--ui-testing", "--directory", directory.path]
         app.launch()
         defer { app.terminate() }
-        app.openNativeWindow()
+        try await app.openNativeWindow()
         let table = app.tables["local-file-list"]
         guard table.waitForExistence(timeout: 20) else { return XCTFail("The native file table did not appear") }
         table.cells.firstMatch.click()
@@ -77,7 +78,14 @@ final class PaneFocusTests: XCTestCase {
 }
 
 extension XCUIApplication {
-    @MainActor func openNativeWindow() {
+    @MainActor func openNativeWindow() async throws {
+        let running = try XCTUnwrap(NSRunningApplication.runningApplications(withBundleIdentifier: "dev.yash.openmtp.native").first)
+        let url = try XCTUnwrap(running.bundleURL)
+        let configuration = NSWorkspace.OpenConfiguration()
+        // XCTest starts the process. Deliver the ordinary app-open event through Launch Services.
+        configuration.appleEvent = NSAppleEventDescriptor(eventClass: AEEventClass(kCoreEventClass), eventID: AEEventID(kAEOpenApplication), targetDescriptor: nil, returnID: AEReturnID(kAutoGenerateReturnID), transactionID: AETransactionID(kAnyTransactionID))
+        let opened = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
+        XCTAssertEqual(opened.processIdentifier, running.processIdentifier)
         activate()
     }
 }

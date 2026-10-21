@@ -1,13 +1,13 @@
 import XCTest
 
 final class TransferInteractionTests: XCTestCase {
-    @MainActor func testLightDarkAndNarrowAppearanceCaptures() async {
+    @MainActor func testLightDarkAndNarrowAppearanceCaptures() async throws {
         for appearance in ["light", "dark"] {
             let app = XCUIApplication()
             app.launchArguments = ["--ui-testing", "--directory", "/tmp/openmtp-native-fixtures/1000", "--appearance", appearance, "--narrow"]
             app.launch()
             defer { app.terminate() }
-            app.openNativeWindow()
+            try await app.openNativeWindow()
             guard app.tables["local-file-list"].waitForExistence(timeout: 20) else { return XCTFail("The native file table did not appear") }
             let count = app.staticTexts["local-selection-status"]
             let counts = ["1000 items", "1,000 items"]
@@ -20,12 +20,12 @@ final class TransferInteractionTests: XCTestCase {
             app.terminate()
         }
     }
-    @MainActor func testDisconnectedDeviceCannotStartCopy() async {
+    @MainActor func testDisconnectedDeviceCannotStartCopy() async throws {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing", "--directory", "/tmp/openmtp-native-fixtures/1000"]
         app.launch()
         defer { app.terminate() }
-        app.openNativeWindow()
+        try await app.openNativeWindow()
         guard app.tables["local-file-list"].waitForExistence(timeout: 20) else { return XCTFail("The native file table did not appear") }
         let status = app.staticTexts["connection-explanation"]
         let disconnected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value CONTAINS %@ OR label CONTAINS %@", "No device found", "No device found"), object: status)
