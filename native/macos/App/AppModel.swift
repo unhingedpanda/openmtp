@@ -213,7 +213,7 @@ import AppKit
             await connect()
         }
     }
-    func usbChanged(attached: Bool) {
+    func usbChanged(attached: Bool, identity: USBDeviceIdentity? = nil, registryID: UInt64? = nil) {
         if engineBusy {
             pendingReconnect = true
             if !attached {

@@ -8,6 +8,13 @@ struct DeviceStorage: Identifiable, Equatable, Sendable {
 struct DeviceInfo: Equatable, Sendable {
     let name: String
     let manufacturer: String
+    var usb: USBDeviceIdentity? = nil
+}
+
+struct USBDeviceIdentity: Equatable, Sendable {
+    let vendor: UInt16
+    let product: UInt16
+    var serial: String? = nil
 }
 
 struct DeviceError: Error, LocalizedError, Equatable, Sendable {
