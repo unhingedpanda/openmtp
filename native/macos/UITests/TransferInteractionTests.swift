@@ -7,7 +7,7 @@ final class TransferInteractionTests: XCTestCase {
             app.launchArguments = ["--ui-testing", "--directory", "/tmp/openmtp-native-fixtures/1000", "--appearance", appearance, "--narrow"]
             app.launch()
             defer { app.terminate() }
-            app.activate()
+            app.openNativeWindow()
             guard app.tables["local-file-list"].waitForExistence(timeout: 20) else { return XCTFail("The native file table did not appear") }
             let count = app.staticTexts["local-selection-status"]
             let loaded = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@ OR label == %@", "1000 items", "1000 items"), object: count)
@@ -24,7 +24,7 @@ final class TransferInteractionTests: XCTestCase {
         app.launchArguments = ["--ui-testing", "--directory", "/tmp/openmtp-native-fixtures/1000"]
         app.launch()
         defer { app.terminate() }
-        app.activate()
+        app.openNativeWindow()
         guard app.tables["local-file-list"].waitForExistence(timeout: 20) else { return XCTFail("The native file table did not appear") }
         let status = app.staticTexts["connection-explanation"]
         let disconnected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value CONTAINS %@ OR label CONTAINS %@", "No device found", "No device found"), object: status)

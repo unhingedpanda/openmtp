@@ -11,7 +11,7 @@ final class BrowserInteractionTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing", "--directory", directory.path]
         app.launch()
-        app.activate()
+        app.openNativeWindow()
         defer { app.terminate() }
         guard app.windows.firstMatch.waitForExistence(timeout: 20) else { return XCTFail("The native window did not appear") }
         let table = app.tables["local-file-list"]
@@ -64,7 +64,7 @@ final class PaneFocusTests: XCTestCase {
         app.launchArguments = ["--ui-testing", "--directory", directory.path]
         app.launch()
         defer { app.terminate() }
-        app.activate()
+        app.openNativeWindow()
         let table = app.tables["local-file-list"]
         guard table.waitForExistence(timeout: 20) else { return XCTFail("The native file table did not appear") }
         table.cells.firstMatch.click()
@@ -73,5 +73,15 @@ final class PaneFocusTests: XCTestCase {
         app.typeKey(.delete, modifierFlags: .command)
         XCTAssertEqual(try Data(contentsOf: original), Data("preserved".utf8))
         XCTAssertFalse(app.sheets.firstMatch.exists)
+    }
+}
+
+extension XCUIApplication {
+    @MainActor func openNativeWindow() {
+        activate()
+        if !windows.firstMatch.waitForExistence(timeout: 2) {
+            // XCTest's process launch may not deliver the ordinary open-application event.
+            typeKey("n", modifierFlags: .command)
+        }
     }
 }

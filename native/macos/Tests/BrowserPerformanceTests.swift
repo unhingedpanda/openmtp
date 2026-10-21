@@ -3,7 +3,7 @@ import SwiftUI
 import XCTest
 
 final class BrowserPerformanceTests: XCTestCase {
-    @MainActor func testTenThousandEntryNativeTableActions() async throws {
+    @MainActor func testTenThousandEntryNativeTableActions() throws {
         _ = NSApplication.shared
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("OpenMTP-10000-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -13,7 +13,9 @@ final class BrowserPerformanceTests: XCTestCase {
             guard case .local(let url) = location else { throw DeviceError.stale }
             return try await LocalFileService().entries(at: url)
         }
-        await pane.refresh()
+        let loaded = expectation(description: "Directory loaded")
+        Task { await pane.refresh(); loaded.fulfill() }
+        wait(for: [loaded], timeout: 20)
         XCTAssertEqual(pane.visibleEntries.count, 10000)
         try measureNativeActions(pane: pane)
     }

@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import platform
+import signal
 import statistics
 import subprocess
 import time
@@ -23,11 +24,40 @@ script_dir = Path(__file__).resolve().parent
 probe = script_dir.parent / 'build/window-probe'
 subprocess.run(['swiftc', '-O', str(script_dir / 'WindowProbe.swift'), '-o', str(probe)], check=True)
 
+class OwnedApplication:
+    def __init__(self, pid):
+        self.pid = pid
+
+    def poll(self):
+        try:
+            os.kill(self.pid, 0)
+            return None
+        except ProcessLookupError:
+            return 0
+
+    def terminate(self):
+        if self.poll() is None:
+            os.kill(self.pid, signal.SIGTERM)
+
+    def kill(self):
+        if self.poll() is None:
+            os.kill(self.pid, signal.SIGKILL)
+
+    def wait(self, timeout):
+        deadline = time.monotonic() + timeout
+        while self.poll() is None:
+            if time.monotonic() >= deadline:
+                raise subprocess.TimeoutExpired(['owned-native-app', str(self.pid)], timeout)
+            time.sleep(0.01)
+
 def launch():
     started = time.perf_counter()
     a.output.parent.mkdir(parents=True, exist_ok=True)
+    pid_file = a.output.with_suffix('.pid')
     with a.output.with_suffix('.launch.log').open('a') as log:
-        process = subprocess.Popen([str(exe), '--ui-testing', '--directory', str(a.fixture.resolve())], stdout=log, stderr=log)
+        subprocess.run([str(probe), '--launch', str(app), str(pid_file), '--ui-testing', '--directory', str(a.fixture.resolve())], stdout=subprocess.DEVNULL, stderr=log, check=True, timeout=12)
+    process = OwnedApplication(int(pid_file.read_text()))
+    pid_file.unlink()
     try:
         subprocess.run([str(probe), str(process.pid)], check=True, timeout=12, stdout=subprocess.DEVNULL)
     except BaseException:
@@ -97,7 +127,7 @@ result = {
     'median_warm_window_seconds': median, 'rss_mib_at_30_seconds': rss,
     'idle_cpu_one_core_percent': cpu, 'cpu_sample_seconds': sample_elapsed, 'owned_pids': pids,
     'passes': {'warm_window_at_most_0_75_seconds': median <= 0.75, 'rss_at_most_150_mib': rss <= 150, 'cpu_at_most_1_percent': cpu <= 1},
-    'method': 'Direct executable launches. First on-screen window via CoreGraphics. Summed ps RSS and process CPU time. One cache-prime launch excluded.',
+    'method': 'NSWorkspace app-bundle launches with a new owned instance. First on-screen window via CoreGraphics. Summed ps RSS and process CPU time. One cache-prime launch excluded.',
 }
 a.output.parent.mkdir(parents=True, exist_ok=True)
 a.output.write_text(json.dumps(result, indent=2) + '\n')

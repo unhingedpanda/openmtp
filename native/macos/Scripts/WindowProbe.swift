@@ -2,6 +2,26 @@ import Foundation
 import CoreGraphics
 import AppKit
 
+if CommandLine.arguments[1] == "--launch" {
+    let application = URL(fileURLWithPath: CommandLine.arguments[2])
+    let pidFile = CommandLine.arguments[3]
+    let configuration = NSWorkspace.OpenConfiguration()
+    configuration.createsNewApplicationInstance = true
+    configuration.activates = true
+    configuration.arguments = Array(CommandLine.arguments.dropFirst(4))
+    NSWorkspace.shared.openApplication(at: application, configuration: configuration) { app, error in
+        guard let app else {
+            FileHandle.standardError.write(Data((error?.localizedDescription ?? "Launch failed").utf8))
+            exit(1)
+        }
+        do { try String(app.processIdentifier).write(toFile: pidFile, atomically: true, encoding: .utf8) }
+        catch { exit(1) }
+        exit(0)
+    }
+    RunLoop.main.run()
+    exit(1)
+}
+
 let pid = Int32(CommandLine.arguments[1])!
 let deadline = Date().addingTimeInterval(10)
 while Date() < deadline {
