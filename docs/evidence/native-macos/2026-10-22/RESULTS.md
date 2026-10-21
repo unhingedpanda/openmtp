@@ -2,6 +2,9 @@
 
 Done, with gaps: physical-phone, local-host performance, and manual accessibility acceptance remain unverified.
 
+Historical acceptance for source `78ac249` follows.
+The later visual refinement is [parked with an unresolved keyboard regression](VISUAL-PARKED.md).
+
 Checked on 2026-10-22: source `78ac2498622ea70516108667c673f76ea16da0d7` passed both complete hosted test batches.
 Each batch passed 45 unit tests, four UI tests, and one browser performance test.
 The final observations met every hosted performance threshold below.

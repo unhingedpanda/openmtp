@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-21T23:04:54.046285+00:00",
+  "title": "Design System: OpenMTP Native",
+  "extensions": {
+    "native": {
+      "platform": "macOS",
+      "frameworks": [
+        "SwiftUI",
+        "AppKit"
+      ],
+      "colorRoles": {
+        "chrome": "NSColor.windowBackgroundColor",
+        "canvas": "NSColor.textBackgroundColor",
+        "accent": "Color.accentColor",
+        "foreground": "primary",
+        "supporting": "secondary"
+      },
+      "materials": {
+        "toolbar": "system NSToolbar Liquid Glass",
+        "connectionAction": "SwiftUI glass button style",
+        "pathAndStatus": "bar"
+      },
+      "sourceFiles": [
+        "native/macos/Browser/BrowserStyle.swift",
+        "native/macos/Browser/BrowserPane.swift",
+        "native/macos/Browser/ConnectionStatusView.swift",
+        "native/macos/Browser/FileGridView.swift",
+        "native/macos/App/OpenMTPNativeApp.swift"
+      ],
+      "previewPolicy": "Native captures provide visual evidence. Web component snippets do not represent this app."
+    }
+  },
+  "components": [],
+  "narrative": {
+    "northStar": "Native Mac file transfer",
+    "overview": "A focused dual-pane Mac workspace. Native navigation sits above legible file content.",
+    "keyCharacteristics": [
+      "System typography and color roles",
+      "Actual file icons",
+      "Native path navigation",
+      "Restrained glass controls",
+      "Visible native resizing"
+    ],
+    "rules": [
+      {
+        "name": "Content stays legible",
+        "body": "Use glass for controls and navigation, with opaque file content.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Preserve native selection, focus, and keyboard behavior.",
+      "Verify light and dark captures."
+    ],
+    "donts": [
+      "Do not add decorative blur or continuous animation.",
+      "Do not run local desktop automation without authorization."
+    ]
+  }
+}

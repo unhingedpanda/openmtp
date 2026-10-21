@@ -1,0 +1,7 @@
+ProductName:		macOS
+ProductVersion:		27.0.1
+BuildVersion:		26A434
+arm64
+Xcode 27.0
+Build version 27A266a
+881e45c3bd2267588f4ffbe8bbdbb25171c872fc

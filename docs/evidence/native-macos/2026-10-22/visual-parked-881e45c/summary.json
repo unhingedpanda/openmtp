@@ -1,0 +1,74 @@
+{
+  "status": "parked, rename regression unresolved",
+  "checked_at_utc": "2026-10-21T23:20:21.517808+00:00",
+  "tested_source": "881e45c3bd2267588f4ffbe8bbdbb25171c872fc",
+  "capture_source": "71059384ce46640a9759dce006d159b295868007",
+  "runs": {
+    "macos-26": {
+      "run": {
+        "conclusion": "failure",
+        "databaseId": 39691999397,
+        "headSha": "881e45c3bd2267588f4ffbe8bbdbb25171c872fc",
+        "status": "completed",
+        "url": "https://github.com/unhingedpanda/openmtp/actions/runs/39691999397"
+      },
+      "test_counts": {
+        "behavior": {
+          "passed": 47,
+          "failed": 0
+        },
+        "ui": {
+          "passed": 4,
+          "failed": 1
+        },
+        "browser": {
+          "passed": 1,
+          "failed": 0
+        }
+      },
+      "diagnostic_attachment": {
+        "configurationName": "Test Scheme Action",
+        "deviceId": "4aacb88acecaa751436d08627917ff57c5eaa456",
+        "deviceName": "My Mac",
+        "exportedFileName": "B2C68B37-20F7-4A25-801A-271D3E3854D5.txt",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "Native-keyboard-diagnostics_0_645FDFEE-5BD4-4B3B-963D-D10FD1636284.txt",
+        "timestamp": 1792624582.843
+      },
+      "local_raw_directory": ".superpowers/sdd/2026-10-22-native-macos-ui/visual-v2-39691999397/final"
+    },
+    "macos-27": {
+      "run": {
+        "conclusion": "failure",
+        "databaseId": 39691999972,
+        "headSha": "881e45c3bd2267588f4ffbe8bbdbb25171c872fc",
+        "status": "completed",
+        "url": "https://github.com/unhingedpanda/openmtp/actions/runs/39691999972"
+      },
+      "test_counts": {
+        "behavior": {
+          "passed": 47,
+          "failed": 0
+        },
+        "ui": {
+          "passed": 4,
+          "failed": 1
+        },
+        "browser": {
+          "passed": 1,
+          "failed": 0
+        }
+      },
+      "diagnostic_attachment": {
+        "configurationName": "Test Scheme Action",
+        "deviceId": "05a78d81c44105416bc6ea4df6974e363c46cff3",
+        "deviceName": "My Mac",
+        "exportedFileName": "7E06597F-6DDB-478A-A52F-4CE7591103C8.txt",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "Native-keyboard-diagnostics_0_9BE11DF9-59C8-47DC-A0C9-29A1470B676A.txt",
+        "timestamp": 1792624539.285
+      },
+      "local_raw_directory": ".superpowers/sdd/2026-10-22-native-macos-ui/visual-v2-39691999972/final"
+    }
+  }
+}

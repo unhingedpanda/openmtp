@@ -1,0 +1,12 @@
+1461.8858360416668 event key=0 keyWindow=true first=Optional(<OpenMTP_Native.BrowserTable: 0x79e5714000>)
+1466.280641625 event key=125 keyWindow=true first=Optional(<OpenMTP_Native.BrowserTable: 0x79e5714c00>)
+1466.2832504166668 table target=ObjectIdentifier(0x00000079e5714c00) key=125 renameCallback=true selected=3 indexes
+1466.4181718333334 event key=36 keyWindow=true first=Optional(<OpenMTP_Native.BrowserTable: 0x79e5714c00>)
+1466.4187205 table target=ObjectIdentifier(0x00000079e5714c00) key=36 renameCallback=true selected=1 indexes
+1466.4188984583334 beginRename rows=3 selected=1 indexes window=true
+1466.4532994166668 rename editor=true first=Optional(<NSTextView: 0x79e531a300>
+    Frame = {{0.00, 0.00}, {186.00, 16.00}}, Bounds = {{0.00, 0.00}, {186.00, 16.00}}
+    Horizontally resizable: YES, Vertically resizable: YES
+    MinSize = {186.00, 16.00}, MaxSize = {40000.00, 40000.00}
+)
+1466.773220875 endRename movement=Optional(0)

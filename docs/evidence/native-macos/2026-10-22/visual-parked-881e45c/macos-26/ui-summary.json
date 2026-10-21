@@ -1,0 +1,49 @@
+{
+  "devicesAndConfigurations" : [
+    {
+      "device" : {
+        "architecture" : "arm64",
+        "deviceId" : "4aacb88acecaa751436d08627917ff57c5eaa456",
+        "deviceName" : "My Mac",
+        "modelName" : "Apple Virtual Machine 1",
+        "osBuildNumber" : "25G83",
+        "osVersion" : "26.6.2",
+        "platform" : "macOS"
+      },
+      "expectedFailures" : 0,
+      "failedTests" : 1,
+      "passedTests" : 4,
+      "skippedTests" : 0,
+      "testPlanConfiguration" : {
+        "configurationId" : "1",
+        "configurationName" : "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription" : "OpenMTPNative · Built with macOS 26.6.2",
+  "expectedFailures" : 0,
+  "failedTests" : 1,
+  "finishTime" : 1792624671.688,
+  "passedTests" : 4,
+  "result" : "Failed",
+  "skippedTests" : 0,
+  "startTime" : 1792624562.151,
+  "statistics" : [
+
+  ],
+  "testFailures" : [
+    {
+      "failureText" : "failed - Rename editor did not open. Status: 1 selected",
+      "targetName" : "OpenMTPNativeUITests",
+      "testIdentifier" : 1,
+      "testIdentifierString" : "BrowserInteractionTests/testKeyboardActionUsesTheFocusedPane()",
+      "testIdentifierURL" : "test://com.apple.xcode/OpenMTPNative/OpenMTPNativeUITests/BrowserInteractionTests/testKeyboardActionUsesTheFocusedPane",
+      "testName" : "testKeyboardActionUsesTheFocusedPane()"
+    }
+  ],
+  "title" : "Test - OpenMTPNative",
+  "topInsights" : [
+
+  ],
+  "totalTestCount" : 5
+}

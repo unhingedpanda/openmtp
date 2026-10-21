@@ -1,0 +1,65 @@
+from pathlib import Path
+import hashlib
+import json
+import shutil
+import subprocess
+
+source = '71059384ce46640a9759dce006d159b295868007'
+runs = [('macos-26', 'macos-26', 39690966676), ('macos-27', 'xcode-27', 39690967597)]
+base = Path('.superpowers/sdd/2026-10-22-native-macos-ui')
+out = Path('docs/evidence/native-macos/2026-10-22/visual-7105938')
+summary = {'tested_source': source, 'local_build_source': source, 'runs': {}}
+paths = ['native/macos/' + p for p in ['App', 'Browser', 'Core', 'Device', 'Bridge', 'Transfers', 'Scripts', 'project.yml']]
+subprocess.run(['git', 'diff', '--exit-code', source, '--', *paths], check=True)
+local = json.loads(Path('native/macos/build/visual-v2-bundle.json').read_text())
+assert local['passed'] and all(local['checks'].values())
+summary['local_bundle'] = {k: v for k, v in local.items() if k != 'app'}
+labels = {
+ 'Native-light-880x640': 'list-light.png',
+ 'Native-dark-880x640': 'list-dark.png',
+ 'Native-light-icons-880x640': 'icons-light.png',
+ 'Native-dark-icons-880x640': 'icons-dark.png',
+ 'Native-light-folders': 'folders-light.png',
+ 'Native-dark-folders': 'folders-dark.png',
+ 'Native-selected-icons': 'selection-light.png',
+ 'Native-connected-light-400x600': 'connected-light.png',
+ 'Native-connected-dark-400x600': 'connected-dark.png',
+}
+for name, runner, run in runs:
+ status = json.loads(subprocess.check_output(['gh', 'run', 'view', str(run), '-R', 'unhingedpanda/openmtp', '--json', 'databaseId,headSha,status,conclusion,url'], text=True))
+ assert status['headSha'] == source and status['status'] == 'completed' and status['conclusion'] == 'success', status
+ raw = base / ('visual-v2-' + str(run)) / 'final'
+ if not raw.exists():
+  subprocess.run(['gh', 'run', 'download', str(run), '-R', 'unhingedpanda/openmtp', '-n', f'native-macos-{runner}-{run}-1', '-D', str(raw)], check=True)
+ suites = {s: json.loads((raw / (s + '-summary.json')).read_text()) for s in ['behavior', 'ui', 'browser']}
+ for suite, count in [('behavior', 47), ('ui', 5), ('browser', 1)]:
+  d = suites[suite]
+  assert d['result'] == 'Passed' and d['passedTests'] == count and d['failedTests'] == 0, (name, suite, d)
+ bundle = json.loads((raw / 'bundle-verification.json').read_text())
+ process = json.loads((raw / 'process-benchmark.json').read_text())
+ browser = json.loads((raw / 'browser-performance.json').read_text())
+ assert bundle['passed'] and all(bundle['checks'].values())
+ assert process['fixture_entries'] == 1000 and len(process['warm_window_seconds']) == 10 and all(process['passes'].values())
+ assert browser['entries'] == 10000 and browser['actions'] == 100 and browser['p95_ms'] <= 100
+ assert source in (raw / 'environment.txt').read_text().splitlines()
+ dest = out / name
+ dest.mkdir(parents=True, exist_ok=True)
+ for file in ['environment.txt', 'bundle-verification.json', 'process-benchmark.json', 'browser-performance.json', 'behavior-summary.json', 'ui-summary.json', 'browser-summary.json', 'native-launch.json', 'reference-launch.json', 'process-benchmark.launch.json']:
+  shutil.copyfile(raw / file, dest / file)
+ captured = set()
+ for suite in ['ui', 'behavior']:
+  directory = raw / (suite + '-attachments')
+  manifest = json.loads((directory / 'manifest.json').read_text())
+  for test in manifest:
+   for attachment in test['attachments']:
+    for label, target in labels.items():
+     if attachment['suggestedHumanReadableName'].startswith(label + '_'):
+      shutil.copyfile(directory / attachment['exportedFileName'], dest / target)
+      captured.add(target)
+ assert captured == set(labels.values()), (name, captured)
+ summary['runs'][name] = {'run': status, 'test_counts': {s: d['passedTests'] for s, d in suites.items()}, 'bundle_mib': bundle['bundle_mib'], 'median_warm_window_seconds': process['median_warm_window_seconds'], 'rss_mib_at_30_seconds': process['rss_mib_at_30_seconds'], 'idle_cpu_one_core_percent': process['idle_cpu_one_core_percent'], 'browser_p95_ms': browser['p95_ms'], 'process_targets': process['passes'], 'captures': sorted(captured)}
+out.mkdir(parents=True, exist_ok=True)
+(out / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
+hashes = {str(p.relative_to(out)): hashlib.sha256(p.read_bytes()).hexdigest() for p in out.rglob('*') if p.is_file() and p.name != 'sha256.json'}
+(out / 'sha256.json').write_text(json.dumps(hashes, indent=2, sort_keys=True) + '\n')
+print(json.dumps(summary, indent=2))

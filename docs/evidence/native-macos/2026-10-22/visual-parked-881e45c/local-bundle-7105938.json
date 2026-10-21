@@ -1,0 +1,20 @@
+{
+  "bundle_mib": 5.424140930175781,
+  "checks": {
+    "bundle_identifier": true,
+    "bundle_size_at_most_50_mib": true,
+    "no_electron": true,
+    "notices_present": true,
+    "application_icon": true,
+    "kalam-seg5.dylib_present": true,
+    "kalam-seg5.dylib_signed": true,
+    "kalam-seg5.dylib_arm64": true,
+    "paired_relative_libusb": true,
+    "libusb-seg5.dylib_present": true,
+    "libusb-seg5.dylib_signed": true,
+    "libusb-seg5.dylib_arm64": true,
+    "signature_valid": true,
+    "no_quarantine": true
+  },
+  "passed": true
+}
