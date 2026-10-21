@@ -17,7 +17,7 @@ struct FileTableView: NSViewRepresentable {
     let pane: PaneModel
     func makeCoordinator() -> Coordinator { Coordinator(pane: pane) }
     func makeNSView(context: Context) -> NSScrollView {
-        let scroll = NSScrollView()
+        let scroll = FileTableScrollView()
         let table = BrowserTable()
         table.autoresizingMask = [.width]
         table.focus = { context.coordinator.pane.onFocus?() }
@@ -56,9 +56,6 @@ struct FileTableView: NSViewRepresentable {
         coordinator.pane = pane
         pane.beginRename = { [weak coordinator] in coordinator?.beginRename() }
         guard let table = scroll.documentView as? NSTableView else { return }
-        if scroll.contentSize.width > 0, table.frame.width != scroll.contentSize.width {
-            table.setFrameSize(NSSize(width: scroll.contentSize.width, height: table.frame.height))
-        }
         table.setAccessibilityIdentifier("\(pane.kind.rawValue)-file-list")
         coordinator.updating = true
         if coordinator.revision != pane.contentRevision {
@@ -207,6 +204,15 @@ struct FileTableView: NSViewRepresentable {
             guard rows.indices.contains(sender.clickedRow) else { return }
             pane.activate(rows[sender.clickedRow])
         }
+    }
+}
+
+@MainActor final class FileTableScrollView: NSScrollView {
+    override func tile() {
+        super.tile()
+        guard let table = documentView as? NSTableView, contentSize.width > 0,
+              abs(table.frame.width - contentSize.width) > 0.5 else { return }
+        table.setFrameSize(NSSize(width: contentSize.width, height: table.frame.height))
     }
 }
 
