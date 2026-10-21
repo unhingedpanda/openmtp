@@ -1,0 +1,38 @@
+name: OpenMTPNative
+options:
+  deploymentTarget:
+    macOS: "26.0"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ARCHS: arm64
+    GENERATE_INFOPLIST_FILE: YES
+    CODE_SIGN_IDENTITY: "-"
+    SWIFT_OBJC_BRIDGING_HEADER: Bridge/KalamBridge.h
+targets:
+  OpenMTPNativeTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Core
+      - Device
+      - Bridge
+      - path: Tests
+        excludes: ["Support/*.c"]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.yash.openmtp.native.tests
+    preBuildScripts:
+      - name: Build fixture library
+        script: |
+          mkdir -p "$SRCROOT/build"
+          /usr/bin/clang -dynamiclib "$SRCROOT/Tests/Support/FixtureKalam.c" -o "$SRCROOT/build/libfixture.dylib"
+        basedOnDependencyAnalysis: false
+schemes:
+  OpenMTPNative:
+    build:
+      targets:
+        OpenMTPNativeTests: [test]
+    test:
+      targets: [OpenMTPNativeTests]
