@@ -2,6 +2,37 @@ import AppKit
 import XCTest
 
 final class FilePromiseTests: XCTestCase {
+    @MainActor func testPromiseCollisionFailsWithoutAnApprovalWindow() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let output = directory.appendingPathComponent("file.txt")
+        try Data("preserved".utf8).write(to: output)
+        let entry = FileEntry(location: .device(storageID: 7, path: "/file.txt"), name: "file.txt", isDirectory: false, byteCount: 4, modifiedAt: nil)
+        let transport = RecordingTransport { request in
+            switch request {
+            case .initialize: return .device(DeviceInfo(name: "Phone", manufacturer: "Fixture"))
+            case .storages: return .storages([DeviceStorage(id: 7, name: "Internal")])
+            case .list: return .entries([entry])
+            default: return .confirmed
+            }
+        }
+        let app = AppModel(session: DeviceSession(transport: transport), monitorUSB: false)
+        await app.connect()
+        let provider = try XCTUnwrap(app.devicePane.onExport?(entry))
+        let completed = expectation(description: "A file promise completes without a window")
+        var result: Error?
+        let writer = Task { @MainActor in
+            result = await write(provider, to: output)
+            completed.fulfill()
+        }
+        await fulfillment(of: [completed], timeout: 1)
+        app.transfers.collisions.decide(.stop)
+        await writer.value
+        XCTAssertNotNil(result)
+        XCTAssertEqual(try Data(contentsOf: output), Data("preserved".utf8))
+    }
+
     @MainActor func testPromiseCompletesOnlyAfterDestinationFileExists() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
