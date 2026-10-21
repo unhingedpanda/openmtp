@@ -61,7 +61,7 @@ jobs:
             'native/macos/build/release/Build/Products/Release/OpenMTP Native.app' \
             --output "$EVIDENCE/bundle-verification.json"
 
-      - name: Run behavior and UI tests
+      - name: Run unit behavior tests
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         timeout-minutes: 15
         run: |
@@ -73,9 +73,34 @@ jobs:
             -derivedDataPath native/macos/build/remote \
             -resultBundlePath "$EVIDENCE/behavior.xcresult" \
             -parallel-testing-enabled NO \
+            -only-testing:OpenMTPNativeTests \
             -skip-testing:OpenMTPNativeTests/BrowserPerformanceTests \
             CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- \
             2>&1 | tee "$EVIDENCE/behavior-tests.log"
+
+      - name: Preserve unit feedback immediately
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: unit-feedback-${{ inputs.runner || 'macos-26' }}-${{ github.run_id }}
+          path: native/macos/build/remote-evidence/behavior-tests.log
+          retention-days: 3
+
+      - name: Run desktop UI tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          xcodebuild test \
+            -project native/macos/OpenMTPNative.xcodeproj \
+            -scheme OpenMTPNative \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath native/macos/build/remote \
+            -resultBundlePath "$EVIDENCE/ui.xcresult" \
+            -parallel-testing-enabled NO \
+            -only-testing:OpenMTPNativeUITests \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- \
+            2>&1 | tee "$EVIDENCE/ui-tests.log"
 
       - name: Run browser performance test separately
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
@@ -110,12 +135,25 @@ jobs:
           if test -f native/macos/build/browser-performance.json; then
             cp native/macos/build/browser-performance.json "$EVIDENCE/"
           fi
+          for suite in behavior ui browser; do
+            result="$EVIDENCE/$suite.xcresult"
+            if test -d "$result"; then
+              xcrun xcresulttool get test-results summary --path "$result" > "$EVIDENCE/$suite-summary.json" || true
+              xcrun xcresulttool export attachments --path "$result" --output-path "$EVIDENCE/$suite-attachments" || true
+            fi
+          done
 
       - name: Preserve verification evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: native-macos-${{ inputs.runner || 'macos-26' }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: native/macos/build/remote-evidence/
+          path: |
+            native/macos/build/remote-evidence/*.log
+            native/macos/build/remote-evidence/*.json
+            native/macos/build/remote-evidence/*.txt
+            native/macos/build/remote-evidence/*-attachments/**/*.png
+            native/macos/build/remote-evidence/*-attachments/**/*.jpg
+            native/macos/build/remote-evidence/*-attachments/**/*.heic
           if-no-files-found: warn
           retention-days: 3

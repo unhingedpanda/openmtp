@@ -2,6 +2,36 @@ import XCTest
 import Foundation
 
 final class DeviceSessionTests: XCTestCase {
+    func testInvalidationPreventsAQueuedDestructiveCallFromExecuting() async throws {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try Data("preserved".utf8).write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let started = expectation(description: "The worker is occupied")
+        let release = DispatchSemaphore(value: 0)
+        let transport = RecordingTransport { request in
+            if case .list = request {
+                started.fulfill()
+                _ = release.wait(timeout: .now() + 3)
+                return .entries([])
+            }
+            if case .delete = request { try FileManager.default.removeItem(at: file) }
+            return .confirmed
+        }
+        let session = DeviceSession(transport: transport)
+        let first = Task { try await session.perform(.list(storage: 7, path: "/")) }
+        await fulfillment(of: [started], timeout: 2)
+        let deletion = Task { try await session.perform(.delete(storage: 7, paths: ["/file.txt"])) }
+        try await Task.sleep(for: .milliseconds(30))
+        await session.invalidate()
+        release.signal()
+        _ = try? await first.value
+        do {
+            _ = try await deletion.value
+            XCTFail("The queued operation belongs to an invalidated connection")
+        } catch { XCTAssertEqual((error as? DeviceError)?.code, "StaleSession") }
+        XCTAssertEqual(try Data(contentsOf: file), Data("preserved".utf8))
+    }
+
     func testNeverRunsBlockingTransportOnMainThread() async throws {
         let transport = ScriptedTransport()
         let session = DeviceSession(transport: transport)

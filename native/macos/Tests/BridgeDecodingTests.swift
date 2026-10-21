@@ -2,6 +2,12 @@ import XCTest
 import Foundation
 
 final class BridgeDecodingTests: XCTestCase {
+    func testDecodesUSBIdentityForNotificationMatching() throws {
+        let data = Data(#"{"data":{"mtpDeviceInfo":{"Model":"Phone","Manufacturer":"Fixture"},"usbDeviceInfo":{"IdVendor":6353,"IdProduct":20193,"Device":256,"Manufacturer":"Fixture","Product":"Phone","SerialNumber":"phone"}}}"#.utf8)
+        guard case .device(let info) = try DeviceRequest.initialize.decode(data) else { return XCTFail("Expected device") }
+        XCTAssertEqual(info.usb, USBDeviceIdentity(vendor: 6353, product: 20193, serial: "phone"))
+    }
+
     private var fixtureURL: URL {
         URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("build/libfixture.dylib")
