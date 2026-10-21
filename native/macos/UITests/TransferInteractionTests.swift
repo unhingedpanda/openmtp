@@ -12,7 +12,7 @@ final class TransferInteractionTests: XCTestCase {
             let count = app.staticTexts["local-selection-status"]
             let counts = ["1000 items", "1,000 items"]
             let loaded = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value IN %@ OR label IN %@", counts, counts), object: count)
-            XCTAssertEqual(XCTWaiter.wait(for: [loaded], timeout: 5), .completed)
+            XCTAssertEqual(XCTWaiter.wait(for: [loaded], timeout: 5), .completed, "Footer value: \(String(describing: count.value)), label: \(count.label)")
             let capture = XCTAttachment(screenshot: app.windows.firstMatch.screenshot())
             capture.name = "Native-\(appearance)-880x640"
             capture.lifetime = .keepAlways

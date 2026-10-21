@@ -19,6 +19,7 @@ struct FileTableView: NSViewRepresentable {
     func makeNSView(context: Context) -> NSScrollView {
         let scroll = NSScrollView()
         let table = BrowserTable()
+        table.autoresizingMask = [.width]
         table.focus = { context.coordinator.pane.onFocus?() }
         table.renameSelection = { context.coordinator.beginRename() }
         table.contextMenu = { context.coordinator.menu(for: $0) }
@@ -30,7 +31,7 @@ struct FileTableView: NSViewRepresentable {
         table.registerForDraggedTypes(BrowserPasteboard.types)
         table.setDraggingSourceOperationMask(.copy, forLocal: true)
         table.setDraggingSourceOperationMask(.copy, forLocal: false)
-        table.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
+        table.columnAutoresizingStyle = .firstColumnOnlyAutoresizingStyle
         for (id, title, width) in [("name", "Name", 300.0), ("size", "Size", 85.0), ("modified", "Modified", 120.0)] {
             let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(id))
             column.title = title
@@ -55,6 +56,9 @@ struct FileTableView: NSViewRepresentable {
         coordinator.pane = pane
         pane.beginRename = { [weak coordinator] in coordinator?.beginRename() }
         guard let table = scroll.documentView as? NSTableView else { return }
+        if scroll.contentSize.width > 0, table.frame.width != scroll.contentSize.width {
+            table.setFrameSize(NSSize(width: scroll.contentSize.width, height: table.frame.height))
+        }
         table.setAccessibilityIdentifier("\(pane.kind.rawValue)-file-list")
         coordinator.updating = true
         if coordinator.revision != pane.contentRevision {

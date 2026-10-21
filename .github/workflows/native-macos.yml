@@ -48,6 +48,9 @@ jobs:
             git rev-parse HEAD
           } > "$EVIDENCE/environment.txt"
           test "$(uname -m)" = arm64
+          # Keep the disposable runner's Dock from covering the minimum-size window.
+          defaults write com.apple.dock autohide -bool true
+          killall Dock || true
           if ! command -v xcodegen >/dev/null; then brew install xcodegen; fi
           python3 native/macos/Scripts/make-fixtures.py /tmp/openmtp-native-fixtures
           xcodegen generate --spec native/macos/project.yml
@@ -193,5 +196,6 @@ jobs:
             native/macos/build/remote-evidence/*-attachments/**/*.jpg
             native/macos/build/remote-evidence/*-attachments/**/*.heic
             native/macos/build/remote-evidence/*-attachments/**/*.json
+            native/macos/build/remote-evidence/*-attachments/**/*.txt
           if-no-files-found: warn
           retention-days: 3
