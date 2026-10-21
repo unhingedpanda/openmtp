@@ -24,6 +24,8 @@ enum BrowserSortKey: String, Sendable { case name, size, modified }
     var onActivate: ((FileEntry) -> Void)?
     var onRename: ((FileEntry, String) -> Void)?
     var onDelete: (() -> Void)?
+    var onNewFolder: (() -> Void)?
+    var onRenameRequested: (() -> Void)?
     var onDrop: (([URL], [EntryLocation]) -> Void)?
     var onExport: ((FileEntry) -> NSFilePromiseProvider?)?
     var loader: @Sendable (EntryLocation) async throws -> [FileEntry]

@@ -19,7 +19,9 @@ struct FileTableView: NSViewRepresentable {
     func makeNSView(context: Context) -> NSScrollView {
         let scroll = NSScrollView()
         let table = BrowserTable()
-        table.focus = { pane.onFocus?() }
+        table.focus = { context.coordinator.pane.onFocus?() }
+        table.renameSelection = { context.coordinator.beginRename() }
+        table.contextMenu = { context.coordinator.menu(for: $0) }
         table.setAccessibilityIdentifier("\(pane.kind.rawValue)-file-list")
         table.style = .inset
         table.rowHeight = 28
@@ -46,8 +48,10 @@ struct FileTableView: NSViewRepresentable {
     }
     func updateNSView(_ scroll: NSScrollView, context: Context) {
         let coordinator = context.coordinator
+        if coordinator.pane !== pane { coordinator.revision = -1 }
         coordinator.pane = pane
         guard let table = scroll.documentView as? NSTableView else { return }
+        table.setAccessibilityIdentifier("\(pane.kind.rawValue)-file-list")
         coordinator.updating = true
         if coordinator.revision != pane.contentRevision {
             coordinator.revision = pane.contentRevision
@@ -59,12 +63,13 @@ struct FileTableView: NSViewRepresentable {
         coordinator.updating = false
     }
 
-    @MainActor final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate {
+    @MainActor final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDelegate {
         var pane: PaneModel
         var rows: [FileEntry] = []
         var revision = -1
         var updating = false
         weak var table: NSTableView?
+        var editingEntry: FileEntry?
         init(pane: PaneModel) { self.pane = pane }
         func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
         func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
@@ -83,6 +88,7 @@ struct FileTableView: NSViewRepresentable {
             label.translatesAutoresizingMaskIntoConstraints = false
             cell.addSubview(label)
             cell.textField = label
+            if id.rawValue == "name" { label.delegate = self }
             if id.rawValue == "name" {
                 let image = NSImageView()
                 image.translatesAutoresizingMaskIntoConstraints = false
@@ -122,6 +128,47 @@ struct FileTableView: NSViewRepresentable {
             pane.sortKey = BrowserSortKey(rawValue: descriptor.key ?? "") ?? .name
             pane.sortAscending = descriptor.ascending
         }
+        func beginRename() {
+            guard let table, let row = table.selectedRowIndexes.first, table.selectedRowIndexes.count == 1,
+                  rows.indices.contains(row), let cell = table.view(atColumn: 0, row: row, makeIfNecessary: true) as? NSTableCellView,
+                  let field = cell.textField else { return }
+            editingEntry = rows[row]
+            field.isEditable = true
+            field.isSelectable = true
+            table.window?.makeFirstResponder(field)
+            field.currentEditor()?.selectAll(nil)
+        }
+        func controlTextDidEndEditing(_ notification: Notification) {
+            guard let field = notification.object as? NSTextField, let entry = editingEntry else { return }
+            editingEntry = nil
+            field.isEditable = false
+            field.isSelectable = false
+            pane.onRename?(entry, field.stringValue)
+        }
+        func menu(for row: Int) -> NSMenu {
+            pane.onFocus?()
+            if row >= 0 && !table!.selectedRowIndexes.contains(row) {
+                table?.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+            }
+            let menu = NSMenu()
+            for (title, action, enabled) in [
+                ("Open", #selector(openSelected), !pane.selection.isEmpty),
+                ("Rename", #selector(renameSelected), pane.selection.count == 1),
+                ("New Folder", #selector(newFolder), true),
+                (pane.kind == .local ? "Move to Trash" : "Delete from Device…", #selector(deleteSelected), !pane.selection.isEmpty)
+            ] {
+                let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+                item.target = self
+                item.isEnabled = enabled
+                menu.addItem(item)
+            }
+            menu.autoenablesItems = false
+            return menu
+        }
+        @objc private func openSelected() { if let entry = pane.selectedEntries.only { pane.activate(entry) } }
+        @objc private func renameSelected() { beginRename() }
+        @objc private func newFolder() { pane.onNewFolder?() }
+        @objc private func deleteSelected() { pane.onDelete?() }
         @objc func openRow(_ sender: NSTableView) {
             guard rows.indices.contains(sender.clickedRow) else { return }
             pane.activate(rows[sender.clickedRow])
@@ -131,6 +178,15 @@ struct FileTableView: NSViewRepresentable {
 
 @MainActor final class BrowserTable: NSTableView {
     var focus: (() -> Void)?
+    var renameSelection: (() -> Void)?
+    var contextMenu: ((Int) -> NSMenu)?
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 36 && event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty { renameSelection?() }
+        else { super.keyDown(with: event) }
+    }
+    override func menu(for event: NSEvent) -> NSMenu? {
+        contextMenu?(row(at: convert(event.locationInWindow, from: nil)))
+    }
     override func becomeFirstResponder() -> Bool { focus?(); return super.becomeFirstResponder() }
     override func mouseDown(with event: NSEvent) { focus?(); super.mouseDown(with: event) }
 }

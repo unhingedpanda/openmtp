@@ -11,10 +11,15 @@ struct BrowserPane: View {
                     .font(.title3).foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(pane.kind == .local ? "This Mac" : model.deviceName).font(.headline)
-                    Text(pane.kind == .local ? "Local files" : (model.connected ? "Connected over USB" : "Not connected"))
+                    Text(pane.kind == .local ? "Local files" : (model.connected ? (model.engineBusy ? "Busy" : "Connected over USB") : "Not connected"))
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
+                if pane.kind == .device && model.connected {
+                    Picker("Storage", selection: Binding(get: { model.selectedStorageID ?? 0 }, set: { id in Task { await model.selectStorage(id) } })) {
+                        ForEach(model.storages) { Text($0.name).tag($0.id) }
+                    }.labelsHidden().fixedSize().disabled(model.engineBusy).accessibilityLabel("Device storage")
+                }
                 if pane.loading { ProgressView().controlSize(.small) }
                 Picker("View", selection: $pane.viewMode) {
                     Image(systemName: "list.bullet").tag(BrowserViewMode.list)
@@ -38,19 +43,10 @@ struct BrowserPane: View {
             ZStack {
                 Color(nsColor: .textBackgroundColor)
                 if pane.kind == .device && !model.connected {
-                    VStack(spacing: 13) {
-                        Image(systemName: "cable.connector").font(.system(size: 44, weight: .light))
-                            .foregroundStyle(.tertiary).padding(.bottom, 4)
-                        Text("Connect your device").font(.title3.weight(.semibold)).accessibilityIdentifier("connection-title")
-                        Text("Use a USB cable, then choose File Transfer\non your device.")
-                            .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                        Button(model.connecting ? "Connecting…" : "Connect") { model.connectAction?() }
-                            .disabled(model.connecting || model.connectAction == nil)
-                            .padding(.top, 5)
-                    }.padding(28)
+                    ConnectionStatusView(model: model)
                 } else {
-                    if pane.viewMode == .list { FileTableView(pane: pane) }
-                    else { FileGridView(pane: pane) }
+                    if pane.viewMode == .list { FileTableView(pane: pane).disabled(pane.kind == .device && model.engineBusy) }
+                    else { FileGridView(pane: pane).disabled(pane.kind == .device && model.engineBusy) }
                     if pane.visibleEntries.isEmpty && !pane.loading {
                         Text("This folder is empty").foregroundStyle(.secondary).allowsHitTesting(false)
                     }

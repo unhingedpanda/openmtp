@@ -17,6 +17,12 @@ final class BridgeDecodingTests: XCTestCase {
         XCTAssertEqual(entries[0].location, .device(storageID: 7, path: "/旅行📷.jpg"))
     }
 
+    func testDecodesEngineFractionalDates() throws {
+        let data = Data(#"{"data":[{"size":4,"isFolder":false,"dateAdded":"2026-01-01T00:00:00.000Z","name":"file","path":"/file"}]}"#.utf8)
+        guard case .entries(let entries) = try DeviceRequest.list(storage: 7, path: "/").decode(data) else { return XCTFail("Expected entries") }
+        XCTAssertEqual(entries.first?.modifiedAt, Date(timeIntervalSince1970: 1767225600))
+    }
+
     func testRejectsMalformedOrErrorCallbackResults() throws {
         let transport = try NativeKalamTransport(libraryURL: fixtureURL)
         XCTAssertThrowsError(try transport.invoke(.list(storage: 7, path: "/broken"), onProgress: { _ in }))

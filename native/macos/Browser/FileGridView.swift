@@ -15,7 +15,9 @@ struct FileGridView: NSViewRepresentable {
         collection.backgroundColors = [.textBackgroundColor]
         collection.isSelectable = true
         collection.allowsMultipleSelection = true
-        collection.focus = { pane.onFocus?() }
+        collection.focus = { context.coordinator.pane.onFocus?() }
+        collection.renameSelection = { context.coordinator.pane.onRenameRequested?() }
+        collection.contextMenu = { context.coordinator.menu() }
         collection.setAccessibilityIdentifier("\(pane.kind.rawValue)-file-grid")
         collection.register(FileGridItem.self, forItemWithIdentifier: NSUserInterfaceItemIdentifier("file"))
         collection.dataSource = context.coordinator
@@ -29,8 +31,10 @@ struct FileGridView: NSViewRepresentable {
     }
     func updateNSView(_ scroll: NSScrollView, context: Context) {
         let coordinator = context.coordinator
+        if coordinator.pane !== pane { coordinator.revision = -1 }
         coordinator.pane = pane
         guard let collection = scroll.documentView as? NSCollectionView else { return }
+        collection.setAccessibilityIdentifier("\(pane.kind.rawValue)-file-grid")
         coordinator.updating = true
         if coordinator.revision != pane.contentRevision {
             coordinator.revision = pane.contentRevision
@@ -59,6 +63,19 @@ struct FileGridView: NSViewRepresentable {
         }
         func collectionView(_ collectionView: NSCollectionView, didSelectItemsAt indexPaths: Set<IndexPath>) { sync(collectionView) }
         func collectionView(_ collectionView: NSCollectionView, didDeselectItemsAt indexPaths: Set<IndexPath>) { sync(collectionView) }
+        func menu() -> NSMenu {
+            pane.onFocus?()
+            let menu = NSMenu()
+            for (title, selector) in [("Rename", #selector(renameSelected)), ("New Folder", #selector(newFolder)), (pane.kind == .local ? "Move to Trash" : "Delete from Device…", #selector(deleteSelected))] {
+                let item = NSMenuItem(title: title, action: selector, keyEquivalent: "")
+                item.target = self
+                menu.addItem(item)
+            }
+            return menu
+        }
+        @objc private func renameSelected() { pane.onRenameRequested?() }
+        @objc private func newFolder() { pane.onNewFolder?() }
+        @objc private func deleteSelected() { pane.onDelete?() }
         private func sync(_ collection: NSCollectionView) {
             guard !updating else { return }
             pane.setSelection(Set(collection.selectionIndexPaths.compactMap { rows.indices.contains($0.item) ? rows[$0.item].id : nil }))
@@ -68,6 +85,12 @@ struct FileGridView: NSViewRepresentable {
 
 @MainActor final class BrowserCollection: NSCollectionView {
     var focus: (() -> Void)?
+    var renameSelection: (() -> Void)?
+    var contextMenu: (() -> NSMenu)?
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 36 { renameSelection?() } else { super.keyDown(with: event) }
+    }
+    override func menu(for event: NSEvent) -> NSMenu? { contextMenu?() }
     override func becomeFirstResponder() -> Bool { focus?(); return super.becomeFirstResponder() }
     override func mouseDown(with event: NSEvent) { focus?(); super.mouseDown(with: event) }
 }

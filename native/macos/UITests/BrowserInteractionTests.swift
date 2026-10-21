@@ -21,13 +21,32 @@ final class BrowserInteractionTests: XCTestCase {
         let status = app.staticTexts["local-selection-status"]
         XCTAssertTrue(NSPredicate(format: "value == %@ OR label == %@", "3 selected", "3 selected").evaluate(with: status))
         XCTAssertFalse(app.buttons["Copy to Device"].isEnabled)
+        app.typeKey(.downArrow, modifierFlags: [])
+        XCTAssertTrue(NSPredicate(format: "value == %@ OR label == %@", "1 selected", "1 selected").evaluate(with: status))
+        app.typeKey(.return, modifierFlags: [])
+        let editor = app.textFields.firstMatch
+        guard editor.waitForExistence(timeout: 2) else { return XCTFail("Rename editor did not open. Status: \(status.value ?? status.label)") }
+        editor.typeKey("a", modifierFlags: .command)
+        editor.typeText("renamed.txt")
+        editor.typeKey(.return, modifierFlags: [])
+        let renamed = directory.appendingPathComponent("renamed.txt")
+        let renamedExpectation = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in FileManager.default.fileExists(atPath: renamed.path) }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [renamedExpectation], timeout: 3), .completed, "Names: \((try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? [])")
+        app.typeKey("n", modifierFlags: [.command, .shift])
+        XCTAssertTrue(app.sheets.firstMatch.waitForExistence(timeout: 3))
+        app.sheets.textFields.firstMatch.click()
+        app.typeKey("a", modifierFlags: .command)
+        app.typeText("Created folder")
+        app.sheets.buttons["New Folder"].click()
+        let folderExpectation = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in FileManager.default.fileExists(atPath: directory.appendingPathComponent("Created folder").path) }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [folderExpectation], timeout: 3), .completed)
         let originalX = table.frame.midX
         app.menuBars.menuBarItems["View"].click()
         app.menuItems["Swap Panes"].click()
         XCTAssertNotEqual(table.frame.midX, originalX)
         table.cells.firstMatch.click()
         app.typeKey("a", modifierFlags: .command)
-        XCTAssertTrue(NSPredicate(format: "value == %@ OR label == %@", "3 selected", "3 selected").evaluate(with: status))
+        XCTAssertTrue(NSPredicate(format: "value == %@ OR label == %@", "4 selected", "4 selected").evaluate(with: status))
         XCTAssertTrue(app.buttons["Copy to Device"].exists)
         app.terminate()
     }

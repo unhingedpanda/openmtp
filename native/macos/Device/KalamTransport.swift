@@ -127,9 +127,11 @@ extension DeviceRequest {
             return .storages(try payload([RawStorage].self).map { DeviceStorage(id: $0.Sid, name: $0.Info.StorageDescription) })
         case .list(let storage, _):
             let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            let fallback = ISO8601DateFormatter()
             return .entries(try payload([RawEntry].self).map {
                 FileEntry(location: .device(storageID: storage, path: $0.path), name: $0.name,
-                          isDirectory: $0.isFolder, byteCount: $0.size, modifiedAt: $0.dateAdded.flatMap(formatter.date))
+                          isDirectory: $0.isFolder, byteCount: $0.size, modifiedAt: $0.dateAdded.flatMap { formatter.date(from: $0) ?? fallback.date(from: $0) })
             })
         case .exists:
             return .existence(Dictionary(try payload([RawExistence].self).map { ($0.fullpath, $0.exists) }, uniquingKeysWith: { _, new in new }))
