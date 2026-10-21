@@ -5,6 +5,8 @@ struct TransferItem: Identifiable, Sendable {
     let source: FileEntry
     let destination: EntryLocation
     var device: DeviceFileService? = nil
+    var destinationName: String? = nil
+    var targetName: String { destinationName ?? source.name }
 }
 enum TransferState: Equatable { case queued, running, completed, skipped, stopped, failed(String) }
 struct TransferRecord: Identifiable {

@@ -38,7 +38,7 @@ struct MainBrowserView: View {
                 }
                 ToolbarItemGroup(placement: .primaryAction) {
                     Button { model.transferAction?() } label: {
-                        Label(model.activePaneKind == .local ? "Copy to Device" : "Copy to Mac", systemImage: model.activePaneKind == .local ? "arrow.right" : "arrow.left")
+                        Label(model.activePaneKind == .local ? "Copy to Device" : "Copy to Mac", systemImage: model.transferSymbol)
                     }
                     .disabled(!model.canTransfer)
                     .help("Copy selected items to the other pane")

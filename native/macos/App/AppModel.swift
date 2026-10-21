@@ -23,6 +23,7 @@ import AppKit
     private(set) var engineBusy = false
     private var pendingReconnect = false
     private var connectionEpoch = 0
+    private(set) var connectionToken = UUID()
     private var monitor: USBMonitor?
     private let monitorUSB: Bool
     private var started = false
@@ -30,6 +31,7 @@ import AppKit
     var nameInput = ""
     var pendingDelete: [FileEntry] = []
     var alert: String?
+    var transferSymbol: String { (activePaneKind == .local) == preferences.localOnLeft ? "arrow.right" : "arrow.left" }
     var activePane: PaneModel { activePaneKind == .local ? localPane : devicePane }
 
     init(session: DeviceSession? = nil, monitorUSB: Bool = true) {
@@ -70,6 +72,32 @@ import AppKit
         devicePane.onFocus = { [weak self] in self?.activePaneKind = .device }
         connectAction = { [weak self] in Task { await self?.connect() } }
         for pane in [localPane, devicePane] {
+            pane.onCopy = { [weak self, weak pane] in
+                guard let self, let pane else { return }
+                activePaneKind = pane.kind
+                copySelection()
+            }
+            pane.onDrop = { [weak self, weak pane] urls, references in
+                guard let self, let pane, !engineBusy else { return }
+                let destination = pane.location
+                let generation = connectionToken
+                let device = fileActions.device
+                Task {
+                    do {
+                        let items = try await DropCoordinator().accept(urls: urls, references: references, destination: destination, generation: generation, device: device)
+                        transfers.enqueue(items)
+                    } catch { alert = error.localizedDescription }
+                }
+            }
+            pane.onExport = { [weak self, weak pane] entry in
+                guard let self, let pane, connected, !engineBusy, pane.entries.contains(entry), let device = fileActions.device else { return nil }
+                let queue = transfers
+                let reference = DeviceDragReference(generation: connectionToken, entry: entry)
+                let delegate = FilePromiseDelegate(entry: entry) { url in
+                    try await queue.enqueueAndWait(TransferItem(source: entry, destination: .local(url.deletingLastPathComponent()), device: device, destinationName: url.lastPathComponent))
+                }
+                return delegate.makeProvider(reference: reference)
+            }
             pane.onRename = { [weak self, weak pane] entry, name in
                 guard let self, let pane, pane.entries.contains(entry), pane.kind == .local || connected else { return }
                 runMutation(pane: pane) { try await self.fileActions.rename(entry, to: name) }
@@ -161,6 +189,7 @@ import AppKit
     }
     private func clearDevice() {
         connected = false
+        connectionToken = UUID()
         deviceName = "Device"
         storages = []
         selectedStorageID = nil
@@ -220,6 +249,7 @@ import AppKit
     }
     func requestRename() {
         guard canActOnPane, let entry = activePane.selectedEntries.only else { return }
+        if let beginRename = activePane.beginRename { beginRename(); return }
         naming = .rename(entry)
         nameInput = entry.name
     }

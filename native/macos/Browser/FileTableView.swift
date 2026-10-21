@@ -27,6 +27,9 @@ struct FileTableView: NSViewRepresentable {
         table.rowHeight = 28
         table.allowsMultipleSelection = true
         table.allowsEmptySelection = true
+        table.registerForDraggedTypes(BrowserPasteboard.types)
+        table.setDraggingSourceOperationMask(.copy, forLocal: true)
+        table.setDraggingSourceOperationMask(.copy, forLocal: false)
         table.columnAutoresizingStyle = .firstColumnOnlyAutoresizingStyle
         for (id, title, width) in [("name", "Name", 300.0), ("size", "Size", 85.0), ("modified", "Modified", 120.0)] {
             let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(id))
@@ -50,6 +53,7 @@ struct FileTableView: NSViewRepresentable {
         let coordinator = context.coordinator
         if coordinator.pane !== pane { coordinator.revision = -1 }
         coordinator.pane = pane
+        pane.beginRename = { [weak coordinator] in coordinator?.beginRename() }
         guard let table = scroll.documentView as? NSTableView else { return }
         table.setAccessibilityIdentifier("\(pane.kind.rawValue)-file-list")
         coordinator.updating = true
@@ -128,6 +132,23 @@ struct FileTableView: NSViewRepresentable {
             pane.sortKey = BrowserSortKey(rawValue: descriptor.key ?? "") ?? .name
             pane.sortAscending = descriptor.ascending
         }
+        func tableView(_ tableView: NSTableView, pasteboardWriterForRow row: Int) -> NSPasteboardWriting? {
+            guard rows.indices.contains(row) else { return nil }
+            let entry = rows[row]
+            if case .local(let url) = entry.location { return url as NSURL }
+            return pane.onExport?(entry)
+        }
+        func tableView(_ tableView: NSTableView, validateDrop info: NSDraggingInfo, proposedRow row: Int, proposedDropOperation operation: NSTableView.DropOperation) -> NSDragOperation {
+            guard BrowserPasteboard.canRead(info.draggingPasteboard), pane.onDrop != nil else { return [] }
+            tableView.setDropRow(-1, dropOperation: .on)
+            return .copy
+        }
+        func tableView(_ tableView: NSTableView, acceptDrop info: NSDraggingInfo, row: Int, dropOperation: NSTableView.DropOperation) -> Bool {
+            let sources = BrowserPasteboard.read(info.draggingPasteboard)
+            guard !sources.urls.isEmpty || !sources.references.isEmpty else { return false }
+            pane.onDrop?(sources.urls, sources.references)
+            return true
+        }
         func beginRename() {
             guard let table, let row = table.selectedRowIndexes.first, table.selectedRowIndexes.count == 1,
                   rows.indices.contains(row), let cell = table.view(atColumn: 0, row: row, makeIfNecessary: true) as? NSTableCellView,
@@ -154,6 +175,7 @@ struct FileTableView: NSViewRepresentable {
             for (title, action, enabled) in [
                 ("Open", #selector(openSelected), !pane.selection.isEmpty),
                 ("Rename", #selector(renameSelected), pane.selection.count == 1),
+                (pane.kind == .local ? "Copy to Device" : "Copy to Mac", #selector(copySelected), !pane.selection.isEmpty),
                 ("New Folder", #selector(newFolder), true),
                 (pane.kind == .local ? "Move to Trash" : "Delete from Device…", #selector(deleteSelected), !pane.selection.isEmpty)
             ] {
@@ -167,6 +189,7 @@ struct FileTableView: NSViewRepresentable {
         }
         @objc private func openSelected() { if let entry = pane.selectedEntries.only { pane.activate(entry) } }
         @objc private func renameSelected() { beginRename() }
+        @objc private func copySelected() { pane.onCopy?() }
         @objc private func newFolder() { pane.onNewFolder?() }
         @objc private func deleteSelected() { pane.onDelete?() }
         @objc func openRow(_ sender: NSTableView) {

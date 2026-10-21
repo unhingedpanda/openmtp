@@ -12,6 +12,7 @@ import Observation
     var activityChanged: (@MainActor (Bool) async -> Void)?
     private let executor: any TransferExecuting
     private var runner: Task<Void, Never>?
+    private var waiters: [UUID: CheckedContinuation<Void, Error>] = [:]
     init(executor: any TransferExecuting = NativeTransferExecutor()) { self.executor = executor }
     func enqueue(_ items: [TransferItem]) {
         guard !items.isEmpty else { return }
@@ -21,6 +22,21 @@ import Observation
         stopping = false
         runner = Task { await run() }
     }
+    func enqueueAndWait(_ item: TransferItem) async throws {
+        try await withCheckedThrowingContinuation { continuation in
+            waiters[item.id] = continuation
+            enqueue([item])
+        }
+    }
+    private func finish(_ index: Int, state: TransferState) {
+        records[index].state = state
+        guard let continuation = waiters.removeValue(forKey: records[index].id) else { return }
+        switch state {
+        case .completed: continuation.resume()
+        case .failed(let message): continuation.resume(throwing: DeviceError(code: "TransferFailed", message: message))
+        default: continuation.resume(throwing: DeviceError(code: "TransferStopped", message: "The file export did not complete."))
+        }
+    }
     func stopAfterCurrentItem() {
         stopping = true
         if collisions.pending != nil { collisions.decide(.stop) }
@@ -29,23 +45,25 @@ import Observation
     func dismissFinished() { guard !busy else { return }; records.removeAll() }
     func retry(_ id: UUID) {
         guard !busy, let record = records.first(where: { $0.id == id }), case .failed = record.state else { return }
-        enqueue([TransferItem(source: record.item.source, destination: record.item.destination, device: record.item.device)])
+        enqueue([TransferItem(source: record.item.source, destination: record.item.destination, device: record.item.device, destinationName: record.item.destinationName)])
     }
     private func run() async {
         await activityChanged?(true)
         while let index = records.firstIndex(where: { $0.state == .queued }) {
-            if stopping { records[index].state = .stopped; continue }
+            if stopping { finish(index, state: .stopped); continue }
             let item = records[index].item
             do {
                 var replace = false
-                if try await executor.destinationExists(item) {
+                let exists = try await executor.destinationExists(item)
+                if stopping { finish(index, state: .stopped); continue }
+                if exists {
                     switch await collisions.resolve(item) {
                     case .replace: replace = true
-                    case .skip: records[index].state = .skipped; continue
-                    case .stop: stopping = true; records[index].state = .stopped; continue
+                    case .skip: finish(index, state: .skipped); continue
+                    case .stop: stopping = true; finish(index, state: .stopped); continue
                     }
                 }
-                if stopping { records[index].state = .stopped; continue }
+                if stopping { finish(index, state: .stopped); continue }
                 currentID = item.id
                 progress = nil
                 records[index].state = .running
@@ -55,9 +73,9 @@ import Observation
                         self.progress = value
                     }
                 }
-                records[index].state = .completed
+                finish(index, state: .completed)
             } catch {
-                records[index].state = .failed(error.localizedDescription + " Check the destination for a partial copy.")
+                finish(index, state: .failed(error.localizedDescription + " Check the destination for a partial copy."))
                 stopping = true
             }
             currentID = nil

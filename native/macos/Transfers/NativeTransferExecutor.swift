@@ -3,16 +3,18 @@ import Foundation
 struct NativeTransferExecutor: TransferExecuting {
     func destinationExists(_ item: TransferItem) async throws -> Bool {
         try FileActionController.validateName(item.source.name)
+        try FileActionController.validateName(item.targetName)
         switch item.destination {
         case .local(let directory):
-            return FileManager.default.fileExists(atPath: directory.appendingPathComponent(item.source.name).path)
+            return FileManager.default.fileExists(atPath: directory.appendingPathComponent(item.targetName).path)
         case .device(let storage, let path):
             guard let device = item.device else { throw DeviceError.stale }
-            return try await device.exists(storage: storage, path: path.appendingPathComponent(item.source.name))
+            return try await device.exists(storage: storage, path: path.appendingPathComponent(item.targetName))
         }
     }
     func execute(_ item: TransferItem, replacing: Bool, progress: @escaping @Sendable (TransferProgress) -> Void) async throws {
         try FileActionController.validateName(item.source.name)
+        try FileActionController.validateName(item.targetName)
         switch (item.source.location, item.destination) {
         case (.local(let source), .device(let storage, let path)):
             guard let device = item.device else { throw DeviceError.stale }
@@ -25,7 +27,7 @@ struct NativeTransferExecutor: TransferExecuting {
         case (_, .local(let directory)):
             if case .local(let source) = item.source.location {
                 let normalized = source.resolvingSymlinksInPath().standardizedFileURL.path
-                let target = directory.appendingPathComponent(item.source.name).resolvingSymlinksInPath().standardizedFileURL.path
+                let target = directory.appendingPathComponent(item.targetName).resolvingSymlinksInPath().standardizedFileURL.path
                 guard target != normalized, !target.hasPrefix(normalized + "/") else {
                     throw DeviceError(code: "InvalidDestination", message: "Choose a destination outside the source item.")
                 }
@@ -54,7 +56,7 @@ struct NativeTransferExecutor: TransferExecuting {
                     throw DeviceError(code: "PartialCopy", message: "The copied file size does not match the source.")
                 }
             }
-            let destination = directory.appendingPathComponent(item.source.name)
+            let destination = directory.appendingPathComponent(item.targetName)
             if FileManager.default.fileExists(atPath: destination.path) {
                 guard replacing else { throw FileActionController.collision }
                 let backup = staging.appendingPathComponent("previous-" + UUID().uuidString)
