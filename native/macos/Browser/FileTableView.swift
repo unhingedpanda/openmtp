@@ -208,11 +208,19 @@ struct FileTableView: NSViewRepresentable {
 }
 
 @MainActor final class FileTableScrollView: NSScrollView {
-    override func tile() {
-        super.tile()
-        guard let table = documentView as? NSTableView, contentSize.width > 0,
-              abs(table.frame.width - contentSize.width) > 0.5 else { return }
-        table.setFrameSize(NSSize(width: contentSize.width, height: table.frame.height))
+    private var fittingColumns = false
+    override func layout() {
+        super.layout()
+        guard !fittingColumns, let table = documentView as? NSTableView,
+              let name = table.tableColumns.first, contentSize.width > 0 else { return }
+        fittingColumns = true
+        defer { fittingColumns = false }
+        let difference = contentSize.width - table.rect(ofColumn: table.tableColumns.count - 1).maxX
+        let nameWidth = max(name.minWidth, name.width + difference)
+        if abs(name.width - nameWidth) > 0.5 { name.width = nameWidth }
+        if abs(table.frame.width - contentSize.width) > 0.5 {
+            table.setFrameSize(NSSize(width: contentSize.width, height: table.frame.height))
+        }
     }
 }
 
