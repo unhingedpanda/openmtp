@@ -61,6 +61,42 @@ jobs:
             'native/macos/build/release/Build/Products/Release/OpenMTP Native.app' \
             --output "$EVIDENCE/bundle-verification.json"
 
+      - name: Diagnose hosted launch with a minimal control
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          reference="$RUNNER_TEMP/Launch Reference.app"
+          mkdir -p "$reference/Contents/MacOS"
+          swiftc -O -target arm64-apple-macos26.0 -parse-as-library native/macos/Scripts/LaunchReference.swift -o "$reference/Contents/MacOS/LaunchReference"
+          swiftc -O native/macos/Scripts/WindowProbe.swift -o "$RUNNER_TEMP/window-probe"
+          python3 - "$reference" <<'PY'
+          import os, pathlib, plistlib, signal, subprocess, sys
+          app = pathlib.Path(sys.argv[1])
+          (app / 'Contents/Info.plist').write_bytes(plistlib.dumps({'CFBundleExecutable': 'LaunchReference', 'CFBundleIdentifier': 'dev.yash.openmtp.launchreference', 'CFBundleName': 'Launch Reference', 'CFBundlePackageType': 'APPL', 'NSPrincipalClass': 'NSApplication'}))
+          subprocess.run(['codesign', '--force', '--sign', '-', str(app)], check=True)
+          import json, shutil, tempfile
+          native = pathlib.Path('native/macos/build/release/Build/Products/Release/OpenMTP Native.app').resolve()
+          for name, target, arguments in [('reference', app, []), ('native', native, ['--ui-testing', '--directory', '/tmp/openmtp-native-fixtures/1000'])]:
+              report = pathlib.Path(os.environ['EVIDENCE']) / (name + '-launch.json')
+              subprocess.run([os.environ['RUNNER_TEMP'] + '/window-probe', '--launch', str(target), str(report), *arguments], check=True, timeout=25)
+              result = json.loads(report.read_text())
+              print(name, result)
+              os.kill(result['pid'], signal.SIGTERM)
+          log = pathlib.Path(tempfile.gettempdir()) / 'openmtp-native-launch.log'
+          if log.exists(): shutil.copyfile(log, pathlib.Path(os.environ['EVIDENCE']) / 'app-launch.log')
+          PY
+
+      - name: Preserve launch diagnostics immediately
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: launch-feedback-${{ inputs.runner || 'macos-26' }}-${{ github.run_id }}
+          path: |
+            native/macos/build/remote-evidence/*-launch.json
+            native/macos/build/remote-evidence/app-launch.log
+          retention-days: 3
+
       - name: Run unit behavior tests
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         timeout-minutes: 15
@@ -101,28 +137,6 @@ jobs:
             -only-testing:OpenMTPNativeUITests \
             CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- \
             2>&1 | tee "$EVIDENCE/ui-tests.log"
-
-      - name: Diagnose hosted launch with a minimal control
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        timeout-minutes: 2
-        run: |
-          set -euo pipefail
-          reference="$RUNNER_TEMP/Launch Reference.app"
-          mkdir -p "$reference/Contents/MacOS"
-          swiftc -O -target arm64-apple-macos26.0 -parse-as-library native/macos/Scripts/LaunchReference.swift -o "$reference/Contents/MacOS/LaunchReference"
-          swiftc -O native/macos/Scripts/WindowProbe.swift -o "$RUNNER_TEMP/window-probe"
-          python3 - "$reference" <<'PY'
-          import os, pathlib, plistlib, signal, subprocess, sys
-          app = pathlib.Path(sys.argv[1])
-          (app / 'Contents/Info.plist').write_bytes(plistlib.dumps({'CFBundleExecutable': 'LaunchReference', 'CFBundleIdentifier': 'dev.yash.openmtp.launchreference', 'CFBundleName': 'Launch Reference', 'CFBundlePackageType': 'APPL', 'NSPrincipalClass': 'NSApplication'}))
-          subprocess.run(['codesign', '--force', '--sign', '-', str(app)], check=True)
-          report = pathlib.Path(os.environ['EVIDENCE']) / 'reference-launch.json'
-          subprocess.run([os.environ['RUNNER_TEMP'] + '/window-probe', '--launch', str(app), str(report)], check=True, timeout=25)
-          import json
-          result = json.loads(report.read_text())
-          print(result)
-          os.kill(result['pid'], signal.SIGTERM)
-          PY
 
       - name: Run browser performance test separately
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
