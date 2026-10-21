@@ -21,8 +21,8 @@ final class TransferInteractionTests: XCTestCase {
             capture.name = "Native-\(appearance)-880x640"
             capture.lifetime = .keepAlways
             add(capture)
-            app.segmentedControls["local-view-mode"].buttons["Icons"].click()
-            XCTAssertTrue(app.collectionViews["local-file-grid"].waitForExistence(timeout: 5))
+            app.radioGroups["local-view-mode"].radioButtons["Icons"].click()
+            XCTAssertTrue(app.descendants(matching: .any)["local-file-grid"].waitForExistence(timeout: 5))
             let icons = XCTAttachment(screenshot: app.windows.firstMatch.screenshot())
             icons.name = "Native-\(appearance)-icons-880x640"
             icons.lifetime = .keepAlways
@@ -48,8 +48,8 @@ final class TransferInteractionTests: XCTestCase {
             defer { app.terminate() }
             let table = app.tables["local-file-list"]
             guard table.waitForExistence(timeout: 20), table.cells.firstMatch.waitForExistence(timeout: 20) else { return XCTFail("The sample folders did not appear") }
-            app.segmentedControls["local-view-mode"].buttons["Icons"].click()
-            XCTAssertTrue(app.collectionViews["local-file-grid"].waitForExistence(timeout: 5))
+            app.radioGroups["local-view-mode"].radioButtons["Icons"].click()
+            XCTAssertTrue(app.descendants(matching: .any)["local-file-grid"].waitForExistence(timeout: 5))
             let capture = XCTAttachment(screenshot: app.windows.firstMatch.screenshot())
             capture.name = "Native-\(appearance)-folders"
             capture.lifetime = .keepAlways

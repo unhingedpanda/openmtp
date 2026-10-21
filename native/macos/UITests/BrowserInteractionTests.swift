@@ -22,11 +22,15 @@ final class BrowserInteractionTests: XCTestCase {
         let status = app.staticTexts["local-selection-status"]
         XCTAssertTrue(NSPredicate(format: "value == %@ OR label == %@", "3 selected", "3 selected").evaluate(with: status))
         XCTAssertFalse(app.buttons["Copy to Device"].isEnabled)
-        let viewMode = app.segmentedControls["local-view-mode"]
-        viewMode.buttons["Icons"].click()
-        XCTAssertTrue(app.collectionViews["local-file-grid"].waitForExistence(timeout: 5))
+        let viewMode = app.radioGroups["local-view-mode"]
+        viewMode.radioButtons["Icons"].click()
+        XCTAssertTrue(app.descendants(matching: .any)["local-file-grid"].waitForExistence(timeout: 5))
         XCTAssertTrue(NSPredicate(format: "value == %@ OR label == %@", "3 selected", "3 selected").evaluate(with: status))
-        viewMode.buttons["List"].click()
+        let selectedIcons = XCTAttachment(screenshot: app.windows.firstMatch.screenshot())
+        selectedIcons.name = "Native-selected-icons"
+        selectedIcons.lifetime = .keepAlways
+        add(selectedIcons)
+        viewMode.radioButtons["List"].click()
         XCTAssertTrue(table.waitForExistence(timeout: 5))
         table.click()
         app.typeKey(.downArrow, modifierFlags: [])
