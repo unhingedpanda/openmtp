@@ -9,7 +9,17 @@ final class BrowserInteractionTests: XCTestCase {
             try Data(name.utf8).write(to: directory.appendingPathComponent(name))
         }
         let app = XCUIApplication()
-        app.launchEnvironment = ["OPENMTP_UI_TESTING": "1", "OPENMTP_DIRECTORY": directory.path]
+        let diagnostics = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".log")
+        defer {
+            if let data = try? Data(contentsOf: diagnostics) {
+                let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.plain-text")
+                attachment.name = "Native-keyboard-diagnostics.txt"
+                attachment.lifetime = .keepAlways
+                add(attachment)
+                try? FileManager.default.removeItem(at: diagnostics)
+            }
+        }
+        app.launchEnvironment = ["OPENMTP_UI_TESTING": "1", "OPENMTP_DIRECTORY": directory.path, "OPENMTP_UI_DIAGNOSTICS": diagnostics.path]
         app.launch()
         app.activate()
         defer { app.terminate() }

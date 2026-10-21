@@ -153,6 +153,7 @@ struct FileTableView: NSViewRepresentable {
             return true
         }
         func beginRename() {
+            NativeUITestDiagnostics.record("beginRename rows=\(rows.count) selected=\(table?.selectedRowIndexes.description ?? "nil") window=\(table?.window != nil)")
             guard let table, let row = table.selectedRowIndexes.first, table.selectedRowIndexes.count == 1,
                   rows.indices.contains(row), let cell = table.view(atColumn: 0, row: row, makeIfNecessary: true) as? NSTableCellView,
                   let field = cell.textField else { return }
@@ -162,8 +163,10 @@ struct FileTableView: NSViewRepresentable {
             field.isSelectable = true
             table.window?.makeFirstResponder(field)
             field.currentEditor()?.selectAll(nil)
+            NativeUITestDiagnostics.record("rename editor=\(field.currentEditor() != nil) first=\(String(describing: table.window?.firstResponder))")
         }
         func controlTextDidEndEditing(_ notification: Notification) {
+            NativeUITestDiagnostics.record("endRename movement=\(String(describing: notification.userInfo?["NSTextMovement"]))")
             guard let field = notification.object as? NSTextField, let entry = editingEntry else { return }
             editingEntry = nil
             field.isEditable = false
@@ -230,6 +233,7 @@ struct FileTableView: NSViewRepresentable {
     var renameSelection: (() -> Void)?
     var contextMenu: ((Int) -> NSMenu)?
     override func keyDown(with event: NSEvent) {
+        NativeUITestDiagnostics.record("table target=\(ObjectIdentifier(self)) key=\(event.keyCode) renameCallback=\(renameSelection != nil) selected=\(selectedRowIndexes)")
         if event.keyCode == 36 && event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty { renameSelection?() }
         else { super.keyDown(with: event) }
     }

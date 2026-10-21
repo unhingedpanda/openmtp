@@ -107,10 +107,21 @@ struct WindowConfiguration: NSViewRepresentable {
     private class WindowMarker: NSView {
         weak var model: AppModel?
         private let closeProxy = WindowCloseProxy()
+        private var diagnosticMonitor: Any?
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             let configuration = LaunchConfiguration.current
             let testing = configuration.isUITesting
+            if window == nil, let monitor = diagnosticMonitor {
+                NSEvent.removeMonitor(monitor)
+                diagnosticMonitor = nil
+            }
+            if NativeUITestDiagnostics.enabled, diagnosticMonitor == nil, let window {
+                diagnosticMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak window] event in
+                    NativeUITestDiagnostics.record("event key=\(event.keyCode) keyWindow=\(NSApp.keyWindow === window) first=\(String(describing: window?.firstResponder))")
+                    return event
+                }
+            }
             window?.setFrameAutosaveName(testing ? "OpenMTPNativeTestWindow" : "OpenMTPNativeMainWindow")
             if configuration.narrow, let window {
                 DispatchQueue.main.async { [weak window] in
