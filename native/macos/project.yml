@@ -11,6 +11,32 @@ settings:
     CODE_SIGN_IDENTITY: "-"
     SWIFT_OBJC_BRIDGING_HEADER: Bridge/KalamBridge.h
 targets:
+  OpenMTPNative:
+    type: application
+    platform: macOS
+    productName: OpenMTP Native
+    sources: [Core, Device, Bridge, Browser, App]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.yash.openmtp.native
+        PRODUCT_NAME: OpenMTP Native
+        INFOPLIST_KEY_CFBundleDisplayName: OpenMTP Native
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+        INFOPLIST_KEY_NSHumanReadableCopyright: "OpenMTP contributors"
+        INFOPLIST_KEY_CFBundleIconFile: OpenMTP.icns
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: 1
+        ENABLE_APP_SANDBOX: NO
+    postBuildScripts:
+      - name: Bundle unchanged device engine
+        script: |
+          DEST="$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/Resources"
+          mkdir -p "$DEST/Engine"
+          cp "$SRCROOT/../../build/mac/bin/arm64/kalam-seg5.dylib" "$DEST/Engine/"
+          cp "$SRCROOT/../../build/mac/bin/arm64/libusb-seg5.dylib" "$DEST/Engine/"
+          cp "$SRCROOT/../../build/icon.icns" "$DEST/OpenMTP.icns"
+          "$SRCROOT/Scripts/prepare-local-app.sh" "$TARGET_BUILD_DIR/$WRAPPER_NAME" --resources-only
+        basedOnDependencyAnalysis: false
   OpenMTPNativeTests:
     type: bundle.unit-test
     platform: macOS
@@ -18,6 +44,8 @@ targets:
       - Core
       - Device
       - Bridge
+      - Browser
+      - App/AppModel.swift
       - path: Tests
         excludes: ["Support/*.c"]
     settings:
@@ -29,10 +57,23 @@ targets:
           mkdir -p "$SRCROOT/build"
           /usr/bin/clang -dynamiclib "$SRCROOT/Tests/Support/FixtureKalam.c" -o "$SRCROOT/build/libfixture.dylib"
         basedOnDependencyAnalysis: false
+  OpenMTPNativeUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources: [UITests]
+    dependencies:
+      - target: OpenMTPNative
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.yash.openmtp.native.uitests
+        TEST_TARGET_NAME: OpenMTPNative
+        SWIFT_OBJC_BRIDGING_HEADER: ""
 schemes:
   OpenMTPNative:
     build:
       targets:
+        OpenMTPNative: all
         OpenMTPNativeTests: [test]
+        OpenMTPNativeUITests: [test]
     test:
-      targets: [OpenMTPNativeTests]
+      targets: [OpenMTPNativeTests, OpenMTPNativeUITests]
