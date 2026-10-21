@@ -15,7 +15,7 @@ targets:
     type: application
     platform: macOS
     productName: OpenMTP Native
-    sources: [Core, Device, Bridge, Browser, App]
+    sources: [Core, Device, Bridge, Browser, Transfers, App]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.yash.openmtp.native
@@ -45,7 +45,9 @@ targets:
       - Device
       - Bridge
       - Browser
+      - Transfers
       - App/AppModel.swift
+      - App/AppLifecycle.swift
       - path: Tests
         excludes: ["Support/*.c"]
     settings:

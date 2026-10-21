@@ -14,7 +14,8 @@ import AppKit
     var session: DeviceSession?
     var connectAction: (() -> Void)?
     var transferAction: (() -> Void)?
-    var canTransfer = false
+    let transfers = TransferCoordinator()
+    var canTransfer: Bool { connected && !engineBusy && !transfers.busy && !activePane.selection.isEmpty }
     let fileActions = FileActionController()
     var storages: [DeviceStorage] = []
     var selectedStorageID: UInt32?
@@ -87,6 +88,15 @@ import AppKit
                 guard let self, let pane else { return }
                 activePaneKind = pane.kind
                 requestRename()
+            }
+        }
+        transferAction = { [weak self] in self?.copySelection() }
+        transfers.activityChanged = { [weak self] busy in
+            guard let self else { return }
+            await setEngineBusy(busy)
+            if !busy {
+                await localPane.refresh()
+                if connected { await devicePane.refresh() }
             }
         }
         localPane.onActivate = { entry in
@@ -196,7 +206,13 @@ import AppKit
         default: return error.message
         }
     }
-    var canActOnPane: Bool { !engineBusy && (activePaneKind == .local || connected) }
+    var canActOnPane: Bool { !engineBusy && !transfers.busy && (activePaneKind == .local || connected) }
+    func copySelection() {
+        guard canTransfer else { return }
+        let destination = activePaneKind == .local ? devicePane.location : localPane.location
+        let items = activePane.selectedEntries.map { TransferItem(source: $0, destination: destination, device: fileActions.device) }
+        transfers.enqueue(items)
+    }
     func requestNewFolder() {
         guard canActOnPane else { return }
         naming = .newFolder(activePane.location)

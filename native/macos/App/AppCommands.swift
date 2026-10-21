@@ -9,6 +9,10 @@ struct AppCommands: Commands {
             Button(model.activePaneKind == .local ? "Move to Trash" : "Delete from Device…") { model.requestDelete() }
                 .keyboardShortcut(.delete, modifiers: .command).disabled(!model.canActOnPane || model.activePane.selection.isEmpty)
             Divider()
+            Button(model.activePaneKind == .local ? "Copy to Device" : "Copy to Mac") { model.copySelection() }
+                .keyboardShortcut("c", modifiers: [.command, .shift]).disabled(!model.canTransfer)
+            Button("Stop after current item") { model.transfers.stopAfterCurrentItem() }.disabled(!model.transfers.busy || model.transfers.stopping)
+            Divider()
             Button("Enclosing Folder") { model.activePane.goUp() }.keyboardShortcut(.upArrow, modifiers: .command)
             Button("Refresh") { Task { await model.activePane.refresh() } }.keyboardShortcut("r")
         }

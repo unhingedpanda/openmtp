@@ -20,3 +20,8 @@ struct FileEntry: Identifiable, Hashable, Sendable {
     let byteCount: Int64
     let modifiedAt: Date?
 }
+
+
+extension EntryLocation {
+    var isDevice: Bool { if case .device = self { true } else { false } }
+}

@@ -3,11 +3,12 @@ import AppKit
 
 @main struct OpenMTPNativeApp: App {
     @State private var model = AppModel()
+    @NSApplicationDelegateAdaptor(AppLifecycle.self) private var lifecycle
     var body: some Scene {
         WindowGroup("OpenMTP Native") {
             MainBrowserView(model: model)
                 .frame(minWidth: 880, minHeight: 640)
-                .task { await model.start() }
+                .task { lifecycle.model = model; await model.start() }
         }
         .defaultSize(width: 1100, height: 740)
         .commands { AppCommands(model: model) }
@@ -18,8 +19,11 @@ import AppKit
 struct MainBrowserView: View {
     @Bindable var model: AppModel
     var body: some View {
-        BrowserSplitView(model: model)
-            .background(WindowConfiguration())
+        VStack(spacing: 0) {
+            BrowserSplitView(model: model)
+            if !model.transfers.records.isEmpty { TransferTray(queue: model.transfers) }
+        }
+            .background(WindowConfiguration(model: model))
             .toolbar {
                 ToolbarItemGroup(placement: .navigation) {
                     Button { model.activePane.goUp() } label: { Label("Enclosing folder", systemImage: "arrow.up") }
@@ -46,6 +50,19 @@ struct MainBrowserView: View {
                     } label: { Label("More", systemImage: "ellipsis") }
                 }
             }
+            .sheet(item: Binding(get: { model.transfers.collisions.pending }, set: { if $0 == nil { model.transfers.collisions.decide(.stop) } })) { item in
+                VStack(alignment: .leading, spacing: 18) {
+                    Text("An item named “\(item.source.name)” already exists.").font(.headline)
+                    Text(item.source.isDirectory && item.destination.isDevice ? "Replace matching files inside this folder? Other items remain." : "Replace the existing item?")
+                    if item.destination.isDevice { Text("A failed device transfer may leave a partial copy.").foregroundStyle(.secondary) }
+                    HStack {
+                        Button("Stop", role: .cancel) { model.transfers.collisions.decide(.stop) }
+                        Spacer()
+                        Button("Skip") { model.transfers.collisions.decide(.skip) }
+                        Button("Replace", role: .destructive) { model.transfers.collisions.decide(.replace) }
+                    }
+                }.padding(24).frame(width: 430).interactiveDismissDisabled()
+            }
             .sheet(isPresented: Binding(get: { model.naming != nil }, set: { if !$0 { model.naming = nil } })) {
                 VStack(alignment: .leading, spacing: 18) {
                     Text(model.naming?.title ?? "Name").font(.headline)
@@ -69,13 +86,21 @@ struct MainBrowserView: View {
 }
 
 struct WindowConfiguration: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView { WindowMarker() }
+    let model: AppModel
+    func makeNSView(context: Context) -> NSView { let marker = WindowMarker(); marker.model = model; return marker }
     func updateNSView(_ view: NSView, context: Context) {}
     private class WindowMarker: NSView {
+        weak var model: AppModel?
+        private let closeProxy = WindowCloseProxy()
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             window?.setFrameAutosaveName("OpenMTPNativeMainWindow")
             window?.toolbarStyle = .unified
+            closeProxy.model = model
+            if let window, window.delegate !== closeProxy {
+                closeProxy.original = window.delegate
+                window.delegate = closeProxy
+            }
         }
     }
 }
