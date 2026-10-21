@@ -10,6 +10,8 @@ The fork's default branch is `codex/native-macos-ui` to support manual workflow 
 
 The workflow is `.github/workflows/native-macos.yml`.
 It uses the standard `macos-26` arm64 runner.
+Manual dispatch can select the standard `xcode-27` runner for macOS 27 coverage.
+The two environments use separate concurrency groups.
 The job skips private repositories before allocating a runner.
 The workflow runs when native files change on `codex/native-macos-ui`.
 The workflow also supports manual dispatch after registration on a default branch.
