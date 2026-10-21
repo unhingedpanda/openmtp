@@ -4,7 +4,9 @@ import AppKit
 @main struct OpenMTPNativeApp: App {
     @State private var model = AppModel()
     @NSApplicationDelegateAdaptor(AppLifecycle.self) private var lifecycle
+    init() { LaunchDiagnostics.record("app_init") }
     var body: some Scene {
+        let _ = LaunchDiagnostics.record("scene_body")
         WindowGroup("OpenMTP Native") {
             MainBrowserView(model: model)
                 .preferredColorScheme(launchColorScheme)
@@ -26,6 +28,7 @@ import AppKit
 struct MainBrowserView: View {
     @Bindable var model: AppModel
     var body: some View {
+        let _ = LaunchDiagnostics.record("browser_body")
         VStack(spacing: 0) {
             BrowserSplitView(model: model)
             if !model.transfers.records.isEmpty { TransferTray(queue: model.transfers) }
@@ -101,6 +104,7 @@ struct WindowConfiguration: NSViewRepresentable {
         private let closeProxy = WindowCloseProxy()
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
+            LaunchDiagnostics.record("marker_moved window=\(String(describing: window)) delegate=\(String(describing: window?.delegate))")
             let arguments = ProcessInfo.processInfo.arguments
             let testing = arguments.contains("--ui-testing")
             window?.setFrameAutosaveName(testing ? "OpenMTPNativeTestWindow" : "OpenMTPNativeMainWindow")

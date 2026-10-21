@@ -102,6 +102,28 @@ jobs:
             CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- \
             2>&1 | tee "$EVIDENCE/ui-tests.log"
 
+      - name: Diagnose hosted launch with a minimal control
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          reference="$RUNNER_TEMP/Launch Reference.app"
+          mkdir -p "$reference/Contents/MacOS"
+          swiftc -O -target arm64-apple-macos26.0 -parse-as-library native/macos/Scripts/LaunchReference.swift -o "$reference/Contents/MacOS/LaunchReference"
+          swiftc -O native/macos/Scripts/WindowProbe.swift -o "$RUNNER_TEMP/window-probe"
+          python3 - "$reference" <<'PY'
+          import os, pathlib, plistlib, signal, subprocess, sys
+          app = pathlib.Path(sys.argv[1])
+          (app / 'Contents/Info.plist').write_bytes(plistlib.dumps({'CFBundleExecutable': 'LaunchReference', 'CFBundleIdentifier': 'dev.yash.openmtp.launchreference', 'CFBundleName': 'Launch Reference', 'CFBundlePackageType': 'APPL', 'NSPrincipalClass': 'NSApplication'}))
+          subprocess.run(['codesign', '--force', '--sign', '-', str(app)], check=True)
+          report = pathlib.Path(os.environ['EVIDENCE']) / 'reference-launch.json'
+          subprocess.run([os.environ['RUNNER_TEMP'] + '/window-probe', '--launch', str(app), str(report)], check=True, timeout=25)
+          import json
+          result = json.loads(report.read_text())
+          print(result)
+          os.kill(result['pid'], signal.SIGTERM)
+          PY
+
       - name: Run browser performance test separately
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         timeout-minutes: 5
@@ -135,6 +157,11 @@ jobs:
           if test -f native/macos/build/browser-performance.json; then
             cp native/macos/build/browser-performance.json "$EVIDENCE/"
           fi
+          python3 - <<'PY'
+          import os, pathlib, shutil, tempfile
+          log = pathlib.Path(tempfile.gettempdir()) / 'openmtp-native-launch.log'
+          if log.exists(): shutil.copyfile(log, pathlib.Path(os.environ['EVIDENCE']) / 'app-launch.log')
+          PY
           for suite in behavior ui browser; do
             result="$EVIDENCE/$suite.xcresult"
             if test -d "$result"; then
