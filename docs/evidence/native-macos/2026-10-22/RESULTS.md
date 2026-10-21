@@ -1,10 +1,18 @@
 # Native preview acceptance
 
-Status: implementation prepared. Final verification is paused at the user's explicit request.
+Status: implementation prepared. Remote final verification resumed at the user's explicit request.
 
-The user stopped all automation until they explicitly resume it.
+The user stopped local automation, then authorized public-fork remote verification.
 The agent terminated its XCUITest runner, preview process, and xcodebuild process.
 A fresh process inventory confirmed that none remained.
+
+## Remote verification
+
+The public fork is [unhingedpanda/openmtp](https://github.com/unhingedpanda/openmtp/tree/codex/native-macos-ui).
+The first remote batch is [run 39677470552](https://github.com/unhingedpanda/openmtp/actions/runs/39677470552).
+Its results remain pending.
+No desktop automation runs on the user's Mac during this batch.
+Remote measurements describe the hosted Mac, not the user's Mac.
 
 ## Verified before the pause
 
@@ -35,4 +43,6 @@ These partial results do not establish final acceptance.
 
 Checked on this Mac before the pause: the USB inventory showed only a Generic Billboard Device.
 No Android MTP test phone was present.
-No public release, push, or replacement of the installed OpenMTP occurred.
+Before the pause, no push or public release occurred.
+The user subsequently authorized publishing this branch to a public fork for remote testing.
+The installed OpenMTP remains separate.

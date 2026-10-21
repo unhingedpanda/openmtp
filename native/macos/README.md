@@ -2,7 +2,8 @@
 
 A separate arm64 macOS 26+ preview with a SwiftUI shell, AppKit file views, and the existing Kalam engine.
 The installed `/Applications/OpenMTP.app` stays unchanged.
-Physical-device acceptance and macOS 26 runtime validation remain pending.
+Physical-device acceptance remains pending.
+Remote macOS 26 runtime verification runs in the fork's GitHub Actions workflow.
 
 ## Build and open
 
@@ -45,15 +46,27 @@ Closing or quitting during a transfer requires a decision.
 
 ## Verification
 
-Run the complete test batch only when desktop automation can use the preview window:
+Desktop automation runs on the public fork's standard GitHub-hosted macOS runner:
 
 ```sh
-native/macos/Scripts/verify.sh
+gh workflow run native-macos.yml -R unhingedpanda/openmtp --ref codex/native-macos-ui
+gh run list -R unhingedpanda/openmtp --workflow native-macos.yml
+```
+
+The workflow builds the preview, checks its bundle, runs tests, and records measurements.
+It preserves evidence for three days.
+The workflow skips private repositories to avoid consuming private-repository minutes.
+Remote timings describe the hosted Mac and do not establish performance on another Mac.
+
+Local desktop execution requires an explicit option:
+
+```sh
+native/macos/Scripts/verify.sh --allow-desktop
 python3 native/macos/Scripts/make-fixtures.py /tmp/openmtp-native-fixtures
 python3 native/macos/Scripts/benchmark.py \
   'native/macos/build/release/Build/Products/Release/OpenMTP Native.app' \
   /tmp/openmtp-native-fixtures/1000 \
-  --output native/macos/build/benchmark.json
+  --output native/macos/build/benchmark.json --allow-desktop
 ```
 
 The test suite uses disposable files and an explicit test defaults suite.

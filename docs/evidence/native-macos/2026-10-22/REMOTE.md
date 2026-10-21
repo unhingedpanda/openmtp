@@ -3,6 +3,8 @@
 Status: remote verification authorized by the user on 2026-10-22.
 The user accepted a public fork with a standard GitHub-hosted macOS runner.
 Desktop automation on the user's Mac remains disabled.
+Fork: [unhingedpanda/openmtp](https://github.com/unhingedpanda/openmtp/tree/codex/native-macos-ui).
+The fork's default branch is `codex/native-macos-ui` to support manual workflow dispatch.
 
 ## Execution
 
@@ -17,6 +19,7 @@ It runs behavior and UI tests before measuring browser and process performance s
 A failed measurement cannot masquerade as a passing behavior gate.
 The job preserves logs, JSON, and XCTest results for three days.
 It does not publish an application binary or create an upstream pull request.
+Local verification and benchmark entry points refuse desktop execution unless explicitly given `--allow-desktop`.
 
 ## Acceptance limits
 

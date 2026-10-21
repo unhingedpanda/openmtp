@@ -2,6 +2,7 @@
 """Measure owned preview processes. Run only during the final desktop test batch."""
 import argparse
 import json
+import os
 import platform
 import statistics
 import subprocess
@@ -12,7 +13,10 @@ p = argparse.ArgumentParser()
 p.add_argument('app', type=Path)
 p.add_argument('fixture', type=Path)
 p.add_argument('--output', type=Path, required=True)
+p.add_argument('--allow-desktop', action='store_true', help='Explicitly allow app launches on this desktop')
 a = p.parse_args()
+if not a.allow_desktop and not (os.environ.get('GITHUB_ACTIONS') == 'true' and os.environ.get('RUNNER_ENVIRONMENT') == 'github-hosted'):
+    p.error('App launches are remote by default. Local desktop execution requires --allow-desktop.')
 app = a.app.resolve()
 exe = app / 'Contents/MacOS/OpenMTP Native'
 script_dir = Path(__file__).resolve().parent
