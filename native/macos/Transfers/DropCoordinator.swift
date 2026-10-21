@@ -46,8 +46,8 @@ struct DeviceDragReference: Codable, Sendable {
 }
 
 @MainActor enum BrowserPasteboard {
-    static let deviceType = NSPasteboard.PasteboardType("dev.yash.openmtp.native.device-file")
-    static let types: [NSPasteboard.PasteboardType] = [.fileURL, deviceType]
+    nonisolated static let deviceType = NSPasteboard.PasteboardType("dev.yash.openmtp.native.device-file")
+    nonisolated static let types: [NSPasteboard.PasteboardType] = [.fileURL, deviceType]
     static func read(_ pasteboard: NSPasteboard) -> (urls: [URL], references: [DeviceDragReference]) {
         let references = (pasteboard.pasteboardItems ?? []).compactMap { item in
             item.data(forType: deviceType).flatMap { try? JSONDecoder().decode(DeviceDragReference.self, from: $0) }

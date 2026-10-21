@@ -55,6 +55,7 @@ struct FileGridView: NSViewRepresentable {
         var updating = false
         weak var collection: NSCollectionView?
         var editingEntry: FileEntry?
+        var editingRevision = -1
         init(pane: PaneModel) { self.pane = pane }
         func collectionView(_ collectionView: NSCollectionView, numberOfItemsInSection section: Int) -> Int { rows.count }
         func collectionView(_ collectionView: NSCollectionView, itemForRepresentedObjectAt indexPath: IndexPath) -> NSCollectionViewItem {
@@ -90,6 +91,7 @@ struct FileGridView: NSViewRepresentable {
             guard let collection, collection.selectionIndexPaths.count == 1, let path = collection.selectionIndexPaths.first,
                   rows.indices.contains(path.item), let field = collection.item(at: path)?.textField else { return }
             editingEntry = rows[path.item]
+            editingRevision = pane.contentRevision
             field.isEditable = true
             field.isSelectable = true
             collection.window?.makeFirstResponder(field)
@@ -100,6 +102,11 @@ struct FileGridView: NSViewRepresentable {
             editingEntry = nil
             field.isEditable = false
             field.isSelectable = false
+            let movement = (notification.userInfo?["NSTextMovement"] as? NSNumber)?.intValue
+            guard movement != NSTextMovement.cancel.rawValue, editingRevision == pane.contentRevision else {
+                field.stringValue = entry.name
+                return
+            }
             pane.onRename?(entry, field.stringValue)
         }
         func menu() -> NSMenu {

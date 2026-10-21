@@ -25,7 +25,7 @@ final class FilePromiseTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(20))
             try Data("retained".utf8).write(to: url)
         }
-        weak var retained = delegate
+        weak let retained = delegate
         let provider = delegate!.makeProvider()
         var sourceWindow: NSWindow? = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 100, height: 100), styleMask: .titled, backing: .buffered, defer: true)
         sourceWindow?.isReleasedWhenClosed = false

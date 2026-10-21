@@ -35,6 +35,9 @@ targets:
           cp "$SRCROOT/../../build/mac/bin/arm64/kalam-seg5.dylib" "$DEST/Engine/"
           cp "$SRCROOT/../../build/mac/bin/arm64/libusb-seg5.dylib" "$DEST/Engine/"
           cp "$SRCROOT/../../build/icon.icns" "$DEST/OpenMTP.icns"
+          mkdir -p "$DEST/Licenses"
+          cp "$SRCROOT/THIRD_PARTY_NOTICES.md" "$DEST/Licenses/"
+          cp "$SRCROOT/Licenses/"* "$DEST/Licenses/"
           "$SRCROOT/Scripts/prepare-local-app.sh" "$TARGET_BUILD_DIR/$WRAPPER_NAME" --resources-only
         basedOnDependencyAnalysis: false
   OpenMTPNativeTests:
@@ -58,6 +61,7 @@ targets:
         script: |
           mkdir -p "$SRCROOT/build"
           /usr/bin/clang -dynamiclib "$SRCROOT/Tests/Support/FixtureKalam.c" -o "$SRCROOT/build/libfixture.dylib"
+          /usr/bin/clang -dynamiclib "$SRCROOT/Tests/Support/MissingKalam.c" -o "$SRCROOT/build/libmissing.dylib"
         basedOnDependencyAnalysis: false
   OpenMTPNativeUITests:
     type: bundle.ui-testing

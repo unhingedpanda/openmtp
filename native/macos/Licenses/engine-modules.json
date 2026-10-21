@@ -1,0 +1,42 @@
+[
+  {
+    "package": "github.com/ganeshrvel/go-mtpfs",
+    "version": "v1.0.4-0.20240426083057-1c3302b3c476",
+    "license_files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "package": "github.com/ganeshrvel/go-mtpx",
+    "version": "v0.0.0-20240426092756-18f12db021cc",
+    "license_files": []
+  },
+  {
+    "package": "github.com/ganeshrvel/usb",
+    "version": "v0.0.0-20210103155855-14d96f5ae403",
+    "license_files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "package": "github.com/json-iterator/go",
+    "version": "v1.1.12",
+    "license_files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "package": "github.com/modern-go/concurrent",
+    "version": "v0.0.0-20180306012644-bacd9c7ef1dd",
+    "license_files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "package": "github.com/modern-go/reflect2",
+    "version": "v1.0.2",
+    "license_files": [
+      "LICENSE"
+    ]
+  }
+]

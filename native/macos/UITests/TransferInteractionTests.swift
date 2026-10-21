@@ -1,13 +1,32 @@
 import XCTest
 
 final class TransferInteractionTests: XCTestCase {
+    @MainActor func testLightDarkAndNarrowAppearanceCaptures() async {
+        for appearance in ["light", "dark"] {
+            let app = XCUIApplication()
+            app.launchArguments = ["--ui-testing", "--directory", "/tmp/openmtp-native-fixtures/1000", "--appearance", appearance, "--narrow"]
+            app.launch()
+            app.activate()
+            XCTAssertTrue(app.tables["local-file-list"].waitForExistence(timeout: 20))
+            let count = app.staticTexts["local-selection-status"]
+            let loaded = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@ OR label == %@", "1000 items", "1000 items"), object: count)
+            XCTAssertEqual(XCTWaiter.wait(for: [loaded], timeout: 5), .completed)
+            let capture = XCTAttachment(screenshot: app.windows.firstMatch.screenshot())
+            capture.name = "Native-\(appearance)-880x640"
+            capture.lifetime = .keepAlways
+            add(capture)
+            app.terminate()
+        }
+    }
     @MainActor func testDisconnectedDeviceCannotStartCopy() async {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing", "--directory", "/tmp"]
         app.launch()
         app.activate()
         XCTAssertTrue(app.tables["local-file-list"].waitForExistence(timeout: 20))
-        XCTAssertTrue(app.staticTexts["connection-title"].exists)
+        let status = app.staticTexts["connection-title"]
+        let disconnected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value CONTAINS %@ OR label CONTAINS %@", "No device found", "No device found"), object: status)
+        XCTAssertEqual(XCTWaiter.wait(for: [disconnected], timeout: 10), .completed)
         XCTAssertFalse(app.buttons["Copy to Device"].isEnabled)
         app.terminate()
     }

@@ -9,10 +9,10 @@ import UniformTypeIdentifiers
         writer = write
     }
     func makeProvider(reference: DeviceDragReference? = nil) -> NSFilePromiseProvider {
-        let provider = DeviceFilePromiseProvider(fileType: entry.isDirectory ? UTType.folder.identifier : (UTType(filenameExtension: (entry.name as NSString).pathExtension) ?? .data).identifier, delegate: self)
+        let type = entry.isDirectory ? UTType.folder.identifier : (UTType(filenameExtension: (entry.name as NSString).pathExtension) ?? .data).identifier
+        let provider = DeviceFilePromiseProvider(type: type, delegate: self, referenceData: reference.flatMap { try? JSONEncoder().encode($0) })
         // AppKit's delegate property is weak. userInfo keeps the writer alive for the entire promise.
         provider.userInfo = self
-        provider.referenceData = reference.flatMap { try? JSONEncoder().encode($0) }
         return provider
     }
     func filePromiseProvider(_ filePromiseProvider: NSFilePromiseProvider, fileNameForType fileType: String) -> String { entry.name }
@@ -31,8 +31,14 @@ import UniformTypeIdentifiers
     }
 }
 
-@MainActor private final class DeviceFilePromiseProvider: NSFilePromiseProvider {
-    var referenceData: Data?
+private final class DeviceFilePromiseProvider: NSFilePromiseProvider {
+    let referenceData: Data?
+    init(type: String, delegate: any NSFilePromiseProviderDelegate, referenceData: Data?) {
+        self.referenceData = referenceData
+        super.init()
+        fileType = type
+        self.delegate = delegate
+    }
     override func writableTypes(for pasteboard: NSPasteboard) -> [NSPasteboard.PasteboardType] {
         let standard = super.writableTypes(for: pasteboard)
         return referenceData == nil ? standard : standard + [BrowserPasteboard.deviceType]

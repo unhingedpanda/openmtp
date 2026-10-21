@@ -28,7 +28,9 @@ void *omtp_open(const char *path) {
     for (size_t i=0; i<sizeof(symbols)/sizeof(symbols[0]); i++) {
         if (!dlsym(handle,symbols[i])) {
             snprintf(last_error,sizeof(last_error),"Missing Kalam operation: %s",symbols[i]);
-            dlclose(handle); return NULL;
+            // Even an incompatible Go library may already have running runtime threads.
+            // Keep it mapped until process exit, just like a successfully loaded engine.
+            return NULL;
         }
     }
     return handle;

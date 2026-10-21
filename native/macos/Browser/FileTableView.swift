@@ -74,6 +74,7 @@ struct FileTableView: NSViewRepresentable {
         var updating = false
         weak var table: NSTableView?
         var editingEntry: FileEntry?
+        var editingRevision = -1
         init(pane: PaneModel) { self.pane = pane }
         func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
         func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
@@ -154,6 +155,7 @@ struct FileTableView: NSViewRepresentable {
                   rows.indices.contains(row), let cell = table.view(atColumn: 0, row: row, makeIfNecessary: true) as? NSTableCellView,
                   let field = cell.textField else { return }
             editingEntry = rows[row]
+            editingRevision = pane.contentRevision
             field.isEditable = true
             field.isSelectable = true
             table.window?.makeFirstResponder(field)
@@ -164,6 +166,11 @@ struct FileTableView: NSViewRepresentable {
             editingEntry = nil
             field.isEditable = false
             field.isSelectable = false
+            let movement = (notification.userInfo?["NSTextMovement"] as? NSNumber)?.intValue
+            guard movement != NSTextMovement.cancel.rawValue, editingRevision == pane.contentRevision else {
+                field.stringValue = entry.name
+                return
+            }
             pane.onRename?(entry, field.stringValue)
         }
         func menu(for row: Int) -> NSMenu {

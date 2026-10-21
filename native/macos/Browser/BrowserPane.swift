@@ -62,7 +62,7 @@ struct BrowserPane: View {
             }
             Divider()
             HStack {
-                Text(pane.selection.isEmpty ? "\(pane.visibleEntries.count) items" : "\(pane.selection.count) selected")
+                Text(pane.selection.isEmpty ? "\(pane.visibleEntries.count) \(pane.visibleEntries.count == 1 ? "item" : "items")" : "\(pane.selection.count) selected")
                     .accessibilityIdentifier("\(pane.kind.rawValue)-selection-status")
                 Spacer()
                 if pane.kind == .device && !model.connected { Text("USB file transfer") }
@@ -84,7 +84,7 @@ struct BrowserSplitView: NSViewRepresentable {
         let split = NSSplitView()
         split.isVertical = true
         split.dividerStyle = .thin
-        split.autosaveName = "OpenMTPNativeBrowserSplit"
+        split.autosaveName = ProcessInfo.processInfo.arguments.contains("--ui-testing") ? "OpenMTPNativeTestSplit" : "OpenMTPNativeBrowserSplit"
         for _ in 0..<2 {
             let host = NSHostingView(rootView: BrowserPane(pane: model.localPane, model: model))
             host.sizingOptions = []

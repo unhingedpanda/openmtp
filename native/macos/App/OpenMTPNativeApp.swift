@@ -31,7 +31,7 @@ struct MainBrowserView: View {
                     Button { Task { await model.activePane.refresh() } } label: { Label("Refresh", systemImage: "arrow.clockwise") }
                         .help("Refresh (⌘R)")
                 }
-                ToolbarItem(placement: .principal) { Text("OpenMTP").font(.headline) }
+                
                 ToolbarItem(placement: .primaryAction) {
                     Button { model.requestNewFolder() } label: { Label("New Folder", systemImage: "folder.badge.plus") }
                         .disabled(!model.canActOnPane)
@@ -94,7 +94,13 @@ struct WindowConfiguration: NSViewRepresentable {
         private let closeProxy = WindowCloseProxy()
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
-            window?.setFrameAutosaveName("OpenMTPNativeMainWindow")
+            let arguments = ProcessInfo.processInfo.arguments
+            let testing = arguments.contains("--ui-testing")
+            window?.setFrameAutosaveName(testing ? "OpenMTPNativeTestWindow" : "OpenMTPNativeMainWindow")
+            if let index = arguments.firstIndex(of: "--appearance"), arguments.indices.contains(index + 1) {
+                window?.appearance = NSAppearance(named: arguments[index + 1] == "dark" ? .darkAqua : .aqua)
+            }
+            if arguments.contains("--narrow") { window?.setContentSize(NSSize(width: 880, height: 640)) }
             window?.toolbarStyle = .unified
             closeProxy.model = model
             if let window, window.delegate !== closeProxy {

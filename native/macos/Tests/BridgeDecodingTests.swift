@@ -60,6 +60,13 @@ final class BridgeDecodingTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(start.duration(to: .now), .milliseconds(90))
     }
 
+    func testMissingEngineSymbolProducesTypedError() {
+        let url = fixtureURL.deletingLastPathComponent().appendingPathComponent("libmissing.dylib")
+        XCTAssertThrowsError(try NativeKalamTransport(libraryURL: url)) { error in
+            XCTAssertEqual((error as? DeviceError)?.code, "EngineUnavailable")
+            XCTAssertTrue(error.localizedDescription.contains("FetchDeviceInfo"))
+        }
+    }
     func testMissingLibraryProducesUsefulError() {
         XCTAssertThrowsError(try NativeKalamTransport(libraryURL: URL(fileURLWithPath: "/missing/kalam.dylib")))
     }

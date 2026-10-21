@@ -86,3 +86,28 @@ final class TransferCoordinatorTests: XCTestCase {
         XCTAssertTrue(queue.canClose)
     }
 }
+
+actor PendingExistenceExecutor: TransferExecuting {
+    var checking = false
+    private var pending: CheckedContinuation<Bool, Never>?
+    func destinationExists(_ item: TransferItem) async throws -> Bool {
+        checking = true
+        return await withCheckedContinuation { pending = $0 }
+    }
+    func finishChecking() { pending?.resume(returning: true); pending = nil }
+    func execute(_ item: TransferItem, replacing: Bool, progress: @escaping @Sendable (TransferProgress) -> Void) async throws { throw DeviceError.stale }
+}
+extension TransferCoordinatorTests {
+    @MainActor func testStopWhileCheckingDestinationDoesNotOpenCollisionSheet() async throws {
+        let executor = PendingExistenceExecutor()
+        let queue = TransferCoordinator(executor: executor)
+        queue.enqueue([transferFixture()])
+        for _ in 0..<100 { if await executor.checking { break }; try await Task.sleep(for: .milliseconds(2)) }
+        queue.stopAfterCurrentItem()
+        await executor.finishChecking()
+        for _ in 0..<100 { if !queue.busy { break }; try await Task.sleep(for: .milliseconds(2)) }
+        XCTAssertNil(queue.collisions.pending)
+        XCTAssertEqual(queue.records.first?.state, .stopped)
+        XCTAssertTrue(queue.canClose)
+    }
+}

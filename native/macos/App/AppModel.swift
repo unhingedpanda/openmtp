@@ -39,7 +39,9 @@ import AppKit
         self.monitorUSB = monitorUSB
         let arguments = ProcessInfo.processInfo.arguments
         let testing = arguments.contains("--ui-testing")
-        preferences = BrowserPreferences(defaults: testing ? UserDefaults(suiteName: "dev.yash.openmtp.native.uitests")! : .standard)
+        let defaults = testing ? UserDefaults(suiteName: "dev.yash.openmtp.native.uitests")! : .standard
+        if testing { defaults.removePersistentDomain(forName: "dev.yash.openmtp.native.uitests") }
+        preferences = BrowserPreferences(defaults: defaults)
         let root: URL
         if let index = arguments.firstIndex(of: "--directory"), arguments.indices.contains(index + 1) {
             root = URL(fileURLWithPath: arguments[index + 1])
