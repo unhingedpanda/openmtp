@@ -25,12 +25,17 @@ subprocess.run(['swiftc', '-O', str(script_dir / 'WindowProbe.swift'), '-o', str
 
 def launch():
     started = time.perf_counter()
-    process = subprocess.Popen([str(exe), '--ui-testing', '--directory', str(a.fixture.resolve())], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    a.output.parent.mkdir(parents=True, exist_ok=True)
+    with a.output.with_suffix('.launch.log').open('a') as log:
+        process = subprocess.Popen([str(exe), '--ui-testing', '--directory', str(a.fixture.resolve())], stdout=log, stderr=log)
     try:
         subprocess.run([str(probe), str(process.pid)], check=True, timeout=12, stdout=subprocess.DEVNULL)
     except BaseException:
-        process.terminate()
-        process.wait(timeout=5)
+        try:
+            subprocess.run(['sample', str(process.pid), '1', '-file', str(a.output.with_suffix('.sample.txt'))], capture_output=True, timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+        stop(process)
         raise
     return process, time.perf_counter() - started
 

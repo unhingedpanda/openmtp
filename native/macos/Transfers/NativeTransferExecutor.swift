@@ -23,6 +23,7 @@ struct NativeTransferExecutor: TransferExecuting {
                 throw DeviceError(code: "UnsupportedFile", message: "The device engine does not transfer symbolic links.")
             }
             if try await destinationExists(item) && !replacing { throw FileActionController.collision }
+            try await TransferPreflight().validateUpload(source: source, storage: storage, parent: path, device: device)
             _ = try await device.perform(.upload(storage: storage, sources: [source.path], destination: path), progress: progress)
         case (_, .local(let directory)):
             if case .local(let source) = item.source.location {
@@ -36,9 +37,13 @@ struct NativeTransferExecutor: TransferExecuting {
             try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: false)
             var preserveStaging = false
             defer { if !preserveStaging { try? FileManager.default.removeItem(at: staging) } }
+            var expected: [ExpectedDownload] = []
             switch item.source.location {
             case .device(let storage, let path):
                 guard let device = item.device else { throw DeviceError.stale }
+                if item.source.isDirectory {
+                    expected = try await TransferPreflight().prepareDownload(storage: storage, source: path, output: staging.appendingPathComponent(item.source.name), device: device)
+                }
                 _ = try await device.perform(.download(storage: storage, sources: [path], destination: staging.path), progress: progress)
             case .local(let source):
                 try await Task.detached(priority: .userInitiated) {
@@ -57,6 +62,7 @@ struct NativeTransferExecutor: TransferExecuting {
                 }
             }
             let destination = directory.appendingPathComponent(item.targetName)
+            try TransferPreflight().validateDownload(expected)
             if FileManager.default.fileExists(atPath: destination.path) {
                 guard replacing else { throw FileActionController.collision }
                 let backup = staging.appendingPathComponent("previous-" + UUID().uuidString)

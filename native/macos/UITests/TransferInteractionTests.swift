@@ -6,8 +6,9 @@ final class TransferInteractionTests: XCTestCase {
             let app = XCUIApplication()
             app.launchArguments = ["--ui-testing", "--directory", "/tmp/openmtp-native-fixtures/1000", "--appearance", appearance, "--narrow"]
             app.launch()
+            defer { app.terminate() }
             app.activate()
-            XCTAssertTrue(app.tables["local-file-list"].waitForExistence(timeout: 20))
+            guard app.tables["local-file-list"].waitForExistence(timeout: 20) else { return XCTFail("The native file table did not appear") }
             let count = app.staticTexts["local-selection-status"]
             let loaded = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@ OR label == %@", "1000 items", "1000 items"), object: count)
             XCTAssertEqual(XCTWaiter.wait(for: [loaded], timeout: 5), .completed)
@@ -20,11 +21,12 @@ final class TransferInteractionTests: XCTestCase {
     }
     @MainActor func testDisconnectedDeviceCannotStartCopy() async {
         let app = XCUIApplication()
-        app.launchArguments = ["--ui-testing", "--directory", "/tmp"]
+        app.launchArguments = ["--ui-testing", "--directory", "/tmp/openmtp-native-fixtures/1000"]
         app.launch()
+        defer { app.terminate() }
         app.activate()
-        XCTAssertTrue(app.tables["local-file-list"].waitForExistence(timeout: 20))
-        let status = app.staticTexts["connection-title"]
+        guard app.tables["local-file-list"].waitForExistence(timeout: 20) else { return XCTFail("The native file table did not appear") }
+        let status = app.staticTexts["connection-explanation"]
         let disconnected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value CONTAINS %@ OR label CONTAINS %@", "No device found", "No device found"), object: status)
         XCTAssertEqual(XCTWaiter.wait(for: [disconnected], timeout: 10), .completed)
         XCTAssertFalse(app.buttons["Copy to Device"].isEnabled)

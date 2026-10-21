@@ -61,7 +61,17 @@ private struct RawStorage: Decodable {
 }
 private struct RawDevice: Decodable {
     let mtpDeviceInfo: InfoValue
+    let usbDeviceInfo: USBValue?
     struct InfoValue: Decodable { let Model: String?; let Manufacturer: String? }
+    struct USBValue: Decodable {
+        let IdVendor: UInt16?
+        let IdProduct: UInt16?
+        let SerialNumber: String?
+        var identity: USBDeviceIdentity? {
+            guard let vendor = IdVendor, let product = IdProduct else { return nil }
+            return USBDeviceIdentity(vendor: vendor, product: product, serial: SerialNumber.flatMap { $0.isEmpty ? nil : $0 })
+        }
+    }
 }
 private struct RawExistence: Decodable { let fullpath: String; let exists: Bool }
 private struct RawProgress: Decodable {
@@ -121,8 +131,9 @@ extension DeviceRequest {
         }
         switch self {
         case .initialize, .deviceInfo:
-            let value = try payload(RawDevice.self).mtpDeviceInfo
-            return .device(DeviceInfo(name: value.Model ?? "MTP device", manufacturer: value.Manufacturer ?? ""))
+            let raw = try payload(RawDevice.self)
+            let value = raw.mtpDeviceInfo
+            return .device(DeviceInfo(name: value.Model ?? "MTP device", manufacturer: value.Manufacturer ?? "", usb: raw.usbDeviceInfo?.identity))
         case .storages:
             return .storages(try payload([RawStorage].self).map { DeviceStorage(id: $0.Sid, name: $0.Info.StorageDescription) })
         case .list(let storage, _):

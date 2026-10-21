@@ -21,6 +21,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: dev.yash.openmtp.native
         PRODUCT_NAME: OpenMTP Native
         INFOPLIST_KEY_CFBundleDisplayName: OpenMTP Native
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
         INFOPLIST_KEY_NSHumanReadableCopyright: "OpenMTP contributors"
         INFOPLIST_KEY_CFBundleIconFile: OpenMTP.icns

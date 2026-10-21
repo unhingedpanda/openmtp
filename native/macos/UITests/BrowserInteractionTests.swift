@@ -12,9 +12,10 @@ final class BrowserInteractionTests: XCTestCase {
         app.launchArguments = ["--ui-testing", "--directory", directory.path]
         app.launch()
         app.activate()
-        XCTAssertTrue(app.windows.firstMatch.waitForExistence(timeout: 20))
+        defer { app.terminate() }
+        guard app.windows.firstMatch.waitForExistence(timeout: 20) else { return XCTFail("The native window did not appear") }
         let table = app.tables["local-file-list"]
-        XCTAssertTrue(table.waitForExistence(timeout: 20))
+        guard table.waitForExistence(timeout: 20) else { return XCTFail("The native file table did not appear") }
         XCTAssertTrue(app.staticTexts["connection-title"].exists)
         table.cells.firstMatch.click()
         app.typeKey("a", modifierFlags: .command)
@@ -49,5 +50,28 @@ final class BrowserInteractionTests: XCTestCase {
         XCTAssertTrue(NSPredicate(format: "value == %@ OR label == %@", "4 selected", "4 selected").evaluate(with: status))
         XCTAssertTrue(app.buttons["Copy to Device"].exists)
         app.terminate()
+    }
+}
+
+final class PaneFocusTests: XCTestCase {
+    @MainActor func testDisconnectedPaneFocusCannotDeleteTheSelectedLocalFile() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let original = directory.appendingPathComponent("keep.txt")
+        try Data("preserved".utf8).write(to: original)
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing", "--directory", directory.path]
+        app.launch()
+        defer { app.terminate() }
+        app.activate()
+        let table = app.tables["local-file-list"]
+        guard table.waitForExistence(timeout: 20) else { return XCTFail("The native file table did not appear") }
+        table.cells.firstMatch.click()
+        app.staticTexts["connection-title"].click()
+        XCTAssertFalse(app.buttons["New Folder"].isEnabled)
+        app.typeKey(.delete, modifierFlags: .command)
+        XCTAssertEqual(try Data(contentsOf: original), Data("preserved".utf8))
+        XCTAssertFalse(app.sheets.firstMatch.exists)
     }
 }

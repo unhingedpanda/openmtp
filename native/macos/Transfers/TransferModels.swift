@@ -6,6 +6,7 @@ struct TransferItem: Identifiable, Sendable {
     let destination: EntryLocation
     var device: DeviceFileService? = nil
     var destinationName: String? = nil
+    var collisionPolicy: CollisionPolicy = .ask
     var targetName: String { destinationName ?? source.name }
 }
 enum TransferState: Equatable { case queued, running, completed, skipped, stopped, failed(String) }
@@ -15,6 +16,7 @@ struct TransferRecord: Identifiable {
     var id: UUID { item.id }
 }
 enum CollisionDecision { case replace, skip, stop }
+enum CollisionPolicy: Equatable, Sendable { case ask, fail }
 protocol TransferExecuting: Sendable {
     func destinationExists(_ item: TransferItem) async throws -> Bool
     func execute(_ item: TransferItem, replacing: Bool, progress: @escaping @Sendable (TransferProgress) -> Void) async throws

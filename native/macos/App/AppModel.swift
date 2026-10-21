@@ -15,7 +15,14 @@ import AppKit
     var connectAction: (() -> Void)?
     var transferAction: (() -> Void)?
     let transfers = TransferCoordinator()
-    var canTransfer: Bool { connected && !engineBusy && !transfers.busy && !activePane.selection.isEmpty }
+    var canTransfer: Bool { deviceReady && !engineBusy && !transfers.busy && !activePane.selection.isEmpty }
+    var deviceReady: Bool {
+        guard connected, !devicePane.loading, devicePane.error == nil,
+              case .device(let storage, _) = devicePane.location else { return false }
+        return selectedStorageID == storage
+    }
+    private var activeUSBIdentity: USBDeviceIdentity?
+    private var activeUSBRegistryID: UInt64?
     let fileActions = FileActionController()
     var storages: [DeviceStorage] = []
     var selectedStorageID: UInt32?
@@ -81,6 +88,7 @@ import AppKit
             }
             pane.onDrop = { [weak self, weak pane] urls, references in
                 guard let self, let pane, !engineBusy else { return }
+                guard pane.kind == .local && references.isEmpty || deviceReady else { return }
                 let destination = pane.location
                 let generation = connectionToken
                 let device = fileActions.device
@@ -92,16 +100,16 @@ import AppKit
                 }
             }
             pane.onExport = { [weak self, weak pane] entry in
-                guard let self, let pane, connected, !engineBusy, pane.entries.contains(entry), let device = fileActions.device else { return nil }
+                guard let self, let pane, deviceReady, !engineBusy, pane.entries.contains(entry), let device = fileActions.device else { return nil }
                 let queue = transfers
                 let reference = DeviceDragReference(generation: connectionToken, entry: entry)
                 let delegate = FilePromiseDelegate(entry: entry) { url in
-                    try await queue.enqueueAndWait(TransferItem(source: entry, destination: .local(url.deletingLastPathComponent()), device: device, destinationName: url.lastPathComponent))
+                    try await queue.enqueueAndWait(TransferItem(source: entry, destination: .local(url.deletingLastPathComponent()), device: device, destinationName: url.lastPathComponent, collisionPolicy: .fail))
                 }
                 return delegate.makeProvider(reference: reference)
             }
             pane.onRename = { [weak self, weak pane] entry, name in
-                guard let self, let pane, pane.entries.contains(entry), pane.kind == .local || connected else { return }
+                guard let self, let pane, pane.entries.contains(entry), pane.kind == .local || deviceReady else { return }
                 runMutation(pane: pane) { try await self.fileActions.rename(entry, to: name) }
             }
             pane.onDelete = { [weak self, weak pane] in
@@ -136,7 +144,7 @@ import AppKit
     func start() async {
         guard !started else { return }
         started = true
-        if monitorUSB { monitor = USBMonitor { [weak self] attached in self?.usbChanged(attached: attached) } }
+        if monitorUSB { monitor = USBMonitor { [weak self] attached, identity, registryID in self?.usbChanged(attached: attached, identity: identity, registryID: registryID) } }
         await localPane.refresh()
         await connect()
     }
@@ -170,6 +178,8 @@ import AppKit
                 return try await service.entries(storage: storage, path: path)
             }
             deviceName = info.name
+            activeUSBIdentity = info.usb
+            activeUSBRegistryID = info.usb.flatMap { monitor?.registryID(matching: $0) }
             storages = values
             connected = true
             connectionMessage = nil
@@ -195,6 +205,8 @@ import AppKit
         deviceName = "Device"
         storages = []
         selectedStorageID = nil
+        activeUSBIdentity = nil
+        activeUSBRegistryID = nil
         devicePane.clear()
         pendingDelete = []
         if case .rename(let entry) = naming, case .device = entry.location { naming = nil }
@@ -203,8 +215,12 @@ import AppKit
     func selectStorage(_ id: UInt32) async {
         guard connected, storages.contains(where: { $0.id == id }), !engineBusy else { return }
         devicePane.clear()
-        selectedStorageID = id
-        await devicePane.navigate(to: .device(storageID: id, path: "/"))
+        let target = EntryLocation.device(storageID: id, path: "/")
+        let epoch = connectionEpoch
+        await devicePane.navigate(to: target)
+        if epoch == connectionEpoch, connected, devicePane.location == target, devicePane.error == nil {
+            selectedStorageID = id
+        }
     }
     func setEngineBusy(_ busy: Bool) async {
         engineBusy = busy
@@ -214,6 +230,16 @@ import AppKit
         }
     }
     func usbChanged(attached: Bool, identity: USBDeviceIdentity? = nil, registryID: UInt64? = nil) {
+        if connected {
+            if let activeUSBRegistryID {
+                guard registryID == activeUSBRegistryID else { return }
+            } else if let activeUSBIdentity {
+                guard identity == activeUSBIdentity else { return }
+            } else if !attached {
+                // Without a unique phone identity, rescan after current work instead of invalidating an unrelated device.
+                if engineBusy { pendingReconnect = true; return }
+            }
+        }
         if engineBusy {
             pendingReconnect = true
             if !attached {
@@ -237,7 +263,7 @@ import AppKit
         default: return error.message
         }
     }
-    var canActOnPane: Bool { !engineBusy && !transfers.busy && (activePaneKind == .local || connected) }
+    var canActOnPane: Bool { !engineBusy && !transfers.busy && (activePaneKind == .local || deviceReady) }
     func copySelection() {
         guard canTransfer else { return }
         let destination = activePaneKind == .local ? devicePane.location : localPane.location

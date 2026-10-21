@@ -15,6 +15,9 @@ final class BrowserPerformanceTests: XCTestCase {
         }
         await pane.refresh()
         XCTAssertEqual(pane.visibleEntries.count, 10000)
+        try measureNativeActions(pane: pane)
+    }
+    @MainActor private func measureNativeActions(pane: PaneModel) throws {
         let host = NSHostingView(rootView: FileTableView(pane: pane))
         host.sizingOptions = []
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 800, height: 600), styleMask: .titled, backing: .buffered, defer: false)
@@ -22,7 +25,7 @@ final class BrowserPerformanceTests: XCTestCase {
         window.contentView = host
         defer { window.close() }
         host.frame = NSRect(x: 0, y: 0, width: 800, height: 600)
-        for _ in 0..<5 { host.layoutSubtreeIfNeeded(); await Task.yield() }
+        host.layoutSubtreeIfNeeded()
         guard let table = findTable(host) else { return XCTFail("Native table was not created") }
         window.makeFirstResponder(table)
         var samples: [Double] = []
@@ -30,7 +33,6 @@ final class BrowserPerformanceTests: XCTestCase {
             let started = ContinuousClock.now
             if action.isMultiple(of: 2) { table.selectRowIndexes(IndexSet(integer: action * 31), byExtendingSelection: false) }
             else { table.moveDown(nil) }
-            await Task.yield()
             host.layoutSubtreeIfNeeded()
             table.displayIfNeeded()
             let elapsed = started.duration(to: .now).components

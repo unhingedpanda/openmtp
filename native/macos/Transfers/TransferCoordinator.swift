@@ -45,7 +45,7 @@ import Observation
     func dismissFinished() { guard !busy else { return }; records.removeAll() }
     func retry(_ id: UUID) {
         guard !busy, let record = records.first(where: { $0.id == id }), case .failed = record.state else { return }
-        enqueue([TransferItem(source: record.item.source, destination: record.item.destination, device: record.item.device, destinationName: record.item.destinationName)])
+        enqueue([TransferItem(source: record.item.source, destination: record.item.destination, device: record.item.device, destinationName: record.item.destinationName, collisionPolicy: record.item.collisionPolicy)])
     }
     private func run() async {
         await activityChanged?(true)
@@ -57,6 +57,7 @@ import Observation
                 let exists = try await executor.destinationExists(item)
                 if stopping { finish(index, state: .stopped); continue }
                 if exists {
+                    if item.collisionPolicy == .fail { throw FileActionController.collision }
                     switch await collisions.resolve(item) {
                     case .replace: replace = true
                     case .skip: finish(index, state: .skipped); continue
