@@ -21,6 +21,39 @@ final class TransferInteractionTests: XCTestCase {
             capture.name = "Native-\(appearance)-880x640"
             capture.lifetime = .keepAlways
             add(capture)
+            app.segmentedControls["local-view-mode"].buttons["Icons"].click()
+            XCTAssertTrue(app.collectionViews["local-file-grid"].waitForExistence(timeout: 5))
+            let icons = XCTAttachment(screenshot: app.windows.firstMatch.screenshot())
+            icons.name = "Native-\(appearance)-icons-880x640"
+            icons.lifetime = .keepAlways
+            add(icons)
+            app.terminate()
+        }
+    }
+    @MainActor func testFolderIconAppearanceCaptures() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("Mac files-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        for name in ["Documents", "Downloads", "Music", "Pictures", "Projects", "Videos"] {
+            try FileManager.default.createDirectory(at: directory.appendingPathComponent(name), withIntermediateDirectories: true)
+        }
+        for name in ["Readme.txt", "Trip.pdf", "Notes.md"] {
+            try Data().write(to: directory.appendingPathComponent(name))
+        }
+        for appearance in ["light", "dark"] {
+            let app = XCUIApplication()
+            app.launchEnvironment = ["OPENMTP_UI_TESTING": "1", "OPENMTP_DIRECTORY": directory.path, "OPENMTP_APPEARANCE": appearance]
+            app.launch()
+            app.activate()
+            defer { app.terminate() }
+            let table = app.tables["local-file-list"]
+            guard table.waitForExistence(timeout: 20), table.cells.firstMatch.waitForExistence(timeout: 20) else { return XCTFail("The sample folders did not appear") }
+            app.segmentedControls["local-view-mode"].buttons["Icons"].click()
+            XCTAssertTrue(app.collectionViews["local-file-grid"].waitForExistence(timeout: 5))
+            let capture = XCTAttachment(screenshot: app.windows.firstMatch.screenshot())
+            capture.name = "Native-\(appearance)-folders"
+            capture.lifetime = .keepAlways
+            add(capture)
             app.terminate()
         }
     }

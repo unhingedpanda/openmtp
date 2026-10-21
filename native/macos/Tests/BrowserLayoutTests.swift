@@ -21,6 +21,28 @@ final class BrowserLayoutTests: XCTestCase {
             XCTAssertGreaterThanOrEqual(table.tableColumns[0].width, 150)
         }
     }
+    @MainActor func testDevicePathKeepsDeviceIdentityAndDoesNotExportALocalURL() {
+        _ = NSApplication.shared
+        let pane = PaneModel(kind: .device, location: .device(storageID: 7, path: "/Documents/Inbox")) { _ in [] }
+        let host = NSHostingView(rootView: BrowserPathBar(pane: pane).disabled(true))
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 440, height: 80), styleMask: .titled, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = host
+        defer { window.close() }
+        host.layoutSubtreeIfNeeded()
+        guard let control = findPath(host), let item = control.pathItems.last else { return XCTFail("The device path was not created") }
+        XCTAssertEqual(control.pathItems.map(\.title), ["Device", "Documents", "Inbox"])
+        XCTAssertEqual(item.url?.path, "/Documents/Inbox")
+        XCTAssertFalse(control.isEnabled)
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name(UUID().uuidString))
+        defer { pasteboard.releaseGlobally() }
+        XCTAssertEqual(control.delegate?.pathControl?(control, shouldDrag: item, with: pasteboard), false)
+    }
+    @MainActor private func findPath(_ view: NSView) -> NSPathControl? {
+        if let control = view as? NSPathControl { return control }
+        for child in view.subviews { if let control = findPath(child) { return control } }
+        return nil
+    }
     @MainActor private func findTable(_ view: NSView) -> NSTableView? {
         if let table = view as? NSTableView { return table }
         for child in view.subviews { if let table = findTable(child) { return table } }

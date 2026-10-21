@@ -22,6 +22,13 @@ final class BrowserInteractionTests: XCTestCase {
         let status = app.staticTexts["local-selection-status"]
         XCTAssertTrue(NSPredicate(format: "value == %@ OR label == %@", "3 selected", "3 selected").evaluate(with: status))
         XCTAssertFalse(app.buttons["Copy to Device"].isEnabled)
+        let viewMode = app.segmentedControls["local-view-mode"]
+        viewMode.buttons["Icons"].click()
+        XCTAssertTrue(app.collectionViews["local-file-grid"].waitForExistence(timeout: 5))
+        XCTAssertTrue(NSPredicate(format: "value == %@ OR label == %@", "3 selected", "3 selected").evaluate(with: status))
+        viewMode.buttons["List"].click()
+        XCTAssertTrue(table.waitForExistence(timeout: 5))
+        table.click()
         app.typeKey(.downArrow, modifierFlags: [])
         XCTAssertTrue(NSPredicate(format: "value == %@ OR label == %@", "1 selected", "1 selected").evaluate(with: status))
         app.typeKey(.return, modifierFlags: [])

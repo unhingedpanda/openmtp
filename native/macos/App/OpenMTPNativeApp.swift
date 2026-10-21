@@ -12,7 +12,7 @@ import AppKit
                 .task { lifecycle.model = model; await model.start() }
         }
         .defaultLaunchBehavior(.presented)
-        .defaultSize(width: 1100, height: 740)
+        .defaultSize(width: 1180, height: 760)
         .commands { AppCommands(model: model) }
         Settings { SettingsView(preferences: model.preferences) }
     }
@@ -29,15 +29,23 @@ struct MainBrowserView: View {
             BrowserSplitView(model: model)
             if !model.transfers.records.isEmpty { TransferTray(queue: model.transfers) }
         }
+            .padding(.horizontal, 6)
+            .background(Color(nsColor: .windowBackgroundColor))
             .background(WindowConfiguration(model: model))
+            .navigationTitle("OpenMTP")
             .toolbar {
-                ToolbarItemGroup(placement: .navigation) {
-                    Button { model.activePane.goUp() } label: { Label("Enclosing folder", systemImage: "arrow.up") }
-                        .help("Enclosing folder (⌘↑)")
-                    Button { Task { await model.activePane.refresh() } } label: { Label("Refresh", systemImage: "arrow.clockwise") }
-                        .help("Refresh (⌘R)")
+                ToolbarItem(placement: .navigation) {
+                    Menu {
+                        ForEach(MacPlace.allCases) { place in
+                            Button(place.title, systemImage: place.symbol) {
+                                model.localPane.onFocus?()
+                                Task { await model.localPane.navigate(to: .local(place.url)) }
+                            }
+                        }
+                    } label: { Label("Locations", systemImage: "folder") }
+                    .labelStyle(.titleAndIcon)
+                    .help("Go to a folder on this Mac")
                 }
-
                 ToolbarItem(placement: .primaryAction) {
                     Button { model.requestNewFolder() } label: { Label("New Folder", systemImage: "folder.badge.plus") }
                         .disabled(!model.canActOnPane)
@@ -47,6 +55,7 @@ struct MainBrowserView: View {
                         Label(model.activePaneKind == .local ? "Copy to Device" : "Copy to Mac", systemImage: model.transferSymbol)
                     }
                     .disabled(!model.canTransfer)
+                    .labelStyle(.titleAndIcon)
                     .help("Copy selected items to the other pane")
                     Menu {
                         Button("Swap panes", systemImage: "arrow.left.arrow.right") { model.preferences.localOnLeft.toggle() }
@@ -116,5 +125,26 @@ struct WindowConfiguration: NSViewRepresentable {
                 window.delegate = closeProxy
             }
         }
+    }
+}
+
+enum MacPlace: String, CaseIterable, Identifiable {
+    case home, desktop, documents, downloads, pictures, music, movies
+    var id: Self { self }
+    var title: String { rawValue.capitalized }
+    var symbol: String {
+        switch self {
+        case .home: "house"
+        case .desktop: "desktopcomputer"
+        case .documents: "doc"
+        case .downloads: "arrow.down.circle"
+        case .pictures: "photo"
+        case .music: "music.note"
+        case .movies: "film"
+        }
+    }
+    var url: URL {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        return self == .home ? home : home.appendingPathComponent(title, isDirectory: true)
     }
 }

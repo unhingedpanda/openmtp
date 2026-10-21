@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 @MainActor enum FilePresentation {
     static func icon(_ entry: FileEntry) -> NSImage {
+        if case .local(let url) = entry.location { return NSWorkspace.shared.icon(forFile: url.path) }
         if entry.isDirectory { return NSWorkspace.shared.icon(for: .folder) }
         let ext = (entry.name as NSString).pathExtension
         return NSWorkspace.shared.icon(for: UTType(filenameExtension: ext) ?? .data)
@@ -25,7 +26,7 @@ struct FileTableView: NSViewRepresentable {
         table.contextMenu = { context.coordinator.menu(for: $0) }
         table.setAccessibilityIdentifier("\(pane.kind.rawValue)-file-list")
         table.style = .inset
-        table.rowHeight = 28
+        table.rowHeight = 30
         table.allowsMultipleSelection = true
         table.allowsEmptySelection = true
         table.registerForDraggedTypes(BrowserPasteboard.types)

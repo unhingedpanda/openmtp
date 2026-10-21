@@ -7,10 +7,10 @@ struct FileGridView: NSViewRepresentable {
     func makeNSView(context: Context) -> NSScrollView {
         let collection = BrowserCollection()
         let layout = NSCollectionViewFlowLayout()
-        layout.itemSize = NSSize(width: 110, height: 104)
-        layout.minimumInteritemSpacing = 8
-        layout.minimumLineSpacing = 10
-        layout.sectionInset = NSEdgeInsets(top: 18, left: 16, bottom: 18, right: 16)
+        layout.itemSize = BrowserStyle.gridItem
+        layout.minimumInteritemSpacing = 4
+        layout.minimumLineSpacing = 8
+        layout.sectionInset = NSEdgeInsets(top: 16, left: 12, bottom: 16, right: 12)
         collection.collectionViewLayout = layout
         collection.backgroundColors = [.textBackgroundColor]
         collection.isSelectable = true
@@ -146,22 +146,23 @@ struct FileGridView: NSViewRepresentable {
     var activate: (() -> Void)?
     override var isSelected: Bool { didSet { updateSelection() } }
     override func loadView() {
-        let container = NSView()
+        let container = FileGridSelectionView()
         container.wantsLayer = true
-        container.layer?.cornerRadius = 7
+        container.layer?.cornerRadius = 10
         let image = NSImageView()
+        image.imageScaling = .scaleProportionallyUpOrDown
         image.translatesAutoresizingMaskIntoConstraints = false
         let label = NSTextField(labelWithString: "")
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 12)
+        label.font = .systemFont(ofSize: 13)
         label.alignment = .center
         label.maximumNumberOfLines = 2
         label.lineBreakMode = .byTruncatingMiddle
         container.addSubview(image); container.addSubview(label)
         NSLayoutConstraint.activate([
-            image.topAnchor.constraint(equalTo: container.topAnchor, constant: 9),
+            image.topAnchor.constraint(equalTo: container.topAnchor, constant: 8),
             image.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            image.widthAnchor.constraint(equalToConstant: 46), image.heightAnchor.constraint(equalToConstant: 46),
+            image.widthAnchor.constraint(equalToConstant: BrowserStyle.gridIcon), image.heightAnchor.constraint(equalToConstant: BrowserStyle.gridIcon),
             label.topAnchor.constraint(equalTo: image.bottomAnchor, constant: 7),
             label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 5),
             label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -5)
@@ -173,6 +174,18 @@ struct FileGridView: NSViewRepresentable {
         if event.clickCount == 2 { activate?() }
     }
     private func updateSelection() {
-        view.layer?.backgroundColor = (isSelected ? NSColor.selectedContentBackgroundColor.withAlphaComponent(0.18) : .clear).cgColor
+        (view as? FileGridSelectionView)?.selected = isSelected
+    }
+}
+
+@MainActor private final class FileGridSelectionView: NSView {
+    var selected = false { didSet { needsDisplay = true } }
+    override var wantsUpdateLayer: Bool { true }
+    override func updateLayer() {
+        layer?.backgroundColor = (selected ? NSColor.selectedContentBackgroundColor.withAlphaComponent(0.18) : .clear).cgColor
+    }
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        needsDisplay = true
     }
 }
