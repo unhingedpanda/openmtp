@@ -10,6 +10,12 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-22-native-macos-ui-design.md`.
 
+**Execution update, checked 2026-10-22:** The native implementation passed 50 tests on each hosted macOS environment.
+Final hosted observations met the unchanged performance targets.
+Physical-phone, local-host performance, and manual accessibility acceptance remain unverified.
+[RESULTS.md](../../evidence/native-macos/2026-10-22/RESULTS.md) is the current acceptance record.
+The original step checklists below preserve plan history.
+
 ## Global Constraints
 
 - Deployment target: macOS 26.0 or later.
@@ -351,7 +357,8 @@ Record round-trip checksums and mark missing device or macOS 26 validation as un
 
 - [ ] Request one independent whole-branch review with the spec, plan, diff, test output, captures, and measurements.
 - [ ] Fix material findings with failing regression checks and rerun the affected full gate.
-- [ ] Commit the verified native changes and acceptance report without publishing or pushing.
+- [x] Commit the verified native changes and acceptance report to the user-authorized fork.
+Do not publish an app binary or create an upstream pull request.
 
 ## Self-review and execution handoff
 

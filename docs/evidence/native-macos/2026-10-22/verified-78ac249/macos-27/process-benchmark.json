@@ -1,0 +1,31 @@
+{
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "app": "/Users/runner/work/openmtp/openmtp/native/macos/build/release/Build/Products/Release/OpenMTP Native.app",
+  "fixture": "/private/tmp/openmtp-native-fixtures/1000",
+  "fixture_entries": 1000,
+  "warm_window_seconds": [
+    0.417679625,
+    0.404857958,
+    0.405661709,
+    0.414458916,
+    0.419328292,
+    0.408840708,
+    0.385779958,
+    0.374558334,
+    0.375436042,
+    0.403913375
+  ],
+  "median_warm_window_seconds": 0.4052598335,
+  "rss_mib_at_30_seconds": 127.046875,
+  "idle_cpu_one_core_percent": 0.4321116390904066,
+  "cpu_sample_seconds": 30.08481795900002,
+  "owned_pids": [
+    27653
+  ],
+  "passes": {
+    "warm_window_at_most_0_75_seconds": true,
+    "rss_at_most_150_mib": true,
+    "cpu_at_most_1_percent": true
+  },
+  "method": "Monotonic timer immediately before NSWorkspace launch request to first owned on-screen window via CoreGraphics. Observer process startup excluded. New owned app instance each launch. Summed ps RSS and process CPU time. One cache-prime launch excluded."
+}

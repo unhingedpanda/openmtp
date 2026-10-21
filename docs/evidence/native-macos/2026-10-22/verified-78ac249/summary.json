@@ -1,0 +1,87 @@
+{
+  "tested_source": "78ac2498622ea70516108667c673f76ea16da0d7",
+  "local_build_source": "bca90b9bf215ab2263a8da13be38c5b4a5bcd8de",
+  "runs": {
+    "macos-26": {
+      "run": {
+        "conclusion": "success",
+        "databaseId": 39687626334,
+        "headSha": "78ac2498622ea70516108667c673f76ea16da0d7",
+        "status": "completed",
+        "url": "https://github.com/unhingedpanda/openmtp/actions/runs/39687626334"
+      },
+      "test_counts": {
+        "behavior": 45,
+        "ui": 4,
+        "browser": 1
+      },
+      "bundle_mib": 5.263370513916016,
+      "median_warm_window_seconds": 0.5828589584999999,
+      "rss_mib_at_30_seconds": 118.578125,
+      "idle_cpu_one_core_percent": 0.5657250275790268,
+      "browser_p95_ms": 34.763917,
+      "process_targets": {
+        "warm_window_at_most_0_75_seconds": true,
+        "rss_at_most_150_mib": true,
+        "cpu_at_most_1_percent": true
+      },
+      "measured_window_bounds": {
+        "Height": 692,
+        "Width": 880,
+        "X": 72,
+        "Y": 56
+      }
+    },
+    "macos-27": {
+      "run": {
+        "conclusion": "success",
+        "databaseId": 39687702395,
+        "headSha": "78ac2498622ea70516108667c673f76ea16da0d7",
+        "status": "completed",
+        "url": "https://github.com/unhingedpanda/openmtp/actions/runs/39687702395"
+      },
+      "test_counts": {
+        "behavior": 45,
+        "ui": 4,
+        "browser": 1
+      },
+      "bundle_mib": 5.205558776855469,
+      "median_warm_window_seconds": 0.4052598335,
+      "rss_mib_at_30_seconds": 127.046875,
+      "idle_cpu_one_core_percent": 0.4321116390904066,
+      "browser_p95_ms": 36.015084,
+      "process_targets": {
+        "warm_window_at_most_0_75_seconds": true,
+        "rss_at_most_150_mib": true,
+        "cpu_at_most_1_percent": true
+      },
+      "measured_window_bounds": {
+        "Height": 692,
+        "Width": 880,
+        "X": 72,
+        "Y": 56
+      }
+    }
+  },
+  "local_product_source_matches_tested_source": true,
+  "local_bundle": {
+    "bundle_mib": 5.206642150878906,
+    "checks": {
+      "bundle_identifier": true,
+      "bundle_size_at_most_50_mib": true,
+      "no_electron": true,
+      "notices_present": true,
+      "application_icon": true,
+      "kalam-seg5.dylib_present": true,
+      "kalam-seg5.dylib_signed": true,
+      "kalam-seg5.dylib_arm64": true,
+      "paired_relative_libusb": true,
+      "libusb-seg5.dylib_present": true,
+      "libusb-seg5.dylib_signed": true,
+      "libusb-seg5.dylib_arm64": true,
+      "signature_valid": true,
+      "no_quarantine": true
+    },
+    "passed": true
+  }
+}
