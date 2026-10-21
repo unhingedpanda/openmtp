@@ -31,9 +31,10 @@ final class TransferInteractionTests: XCTestCase {
         }
     }
     @MainActor func testFolderIconAppearanceCaptures() async throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("Mac files-" + UUID().uuidString)
+        let fixtureRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let directory = fixtureRoot.appendingPathComponent("Mac files")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        defer { try? FileManager.default.removeItem(at: fixtureRoot) }
         for name in ["Documents", "Downloads", "Music", "Pictures", "Projects", "Videos"] {
             try FileManager.default.createDirectory(at: directory.appendingPathComponent(name), withIntermediateDirectories: true)
         }

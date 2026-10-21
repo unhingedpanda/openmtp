@@ -32,7 +32,7 @@ final class BrowserInteractionTests: XCTestCase {
         add(selectedIcons)
         viewMode.radioButtons["List"].click()
         XCTAssertTrue(table.waitForExistence(timeout: 5))
-        table.click()
+        table.cells.firstMatch.click()
         app.typeKey(.downArrow, modifierFlags: [])
         XCTAssertTrue(NSPredicate(format: "value == %@ OR label == %@", "1 selected", "1 selected").evaluate(with: status))
         app.typeKey(.return, modifierFlags: [])

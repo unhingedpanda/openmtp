@@ -95,7 +95,9 @@ struct BrowserPane: View {
                 if pane.kind == .device {
                     Picker("Storage", selection: Binding(get: { model.selectedStorageID ?? 0 }, set: { id in Task { await model.selectStorage(id) } })) {
                         ForEach(model.storages) { Text($0.name).tag($0.id) }
-                    }.labelsHidden().fixedSize().disabled(model.engineBusy).accessibilityLabel("Device storage")
+                    }.labelsHidden().lineLimit(1).truncationMode(.middle).frame(width: 140)
+                        .disabled(model.engineBusy).accessibilityLabel("Device storage")
+                        .help(model.storages.first(where: { $0.id == model.selectedStorageID })?.name ?? "Device storage")
                 }
                 Button { pane.onFocus?(); Task { await pane.refresh() } } label: { Label("Refresh", systemImage: "arrow.clockwise") }
                     .labelStyle(.iconOnly).buttonStyle(.borderless).help("Refresh (⌘R)")
@@ -154,8 +156,6 @@ struct BrowserSplitView: NSViewRepresentable {
 
 @MainActor private final class BalancedBrowserSplit: NSSplitView {
     private var positioned = false
-    override var dividerThickness: CGFloat { 1 }
-    override func drawDivider(in rect: NSRect) {}
     override func resizeSubviews(withOldSize oldSize: NSSize) {
         super.resizeSubviews(withOldSize: oldSize)
         if !positioned && bounds.width > 0 {
