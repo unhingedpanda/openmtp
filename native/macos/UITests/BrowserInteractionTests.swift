@@ -79,9 +79,5 @@ final class PaneFocusTests: XCTestCase {
 extension XCUIApplication {
     @MainActor func openNativeWindow() {
         activate()
-        if !windows.firstMatch.waitForExistence(timeout: 2) {
-            // XCTest's process launch may not deliver the ordinary open-application event.
-            typeKey("n", modifierFlags: .command)
-        }
     }
 }

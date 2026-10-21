@@ -30,7 +30,7 @@ struct FileTableView: NSViewRepresentable {
         table.registerForDraggedTypes(BrowserPasteboard.types)
         table.setDraggingSourceOperationMask(.copy, forLocal: true)
         table.setDraggingSourceOperationMask(.copy, forLocal: false)
-        table.columnAutoresizingStyle = .firstColumnOnlyAutoresizingStyle
+        table.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
         for (id, title, width) in [("name", "Name", 300.0), ("size", "Size", 85.0), ("modified", "Modified", 120.0)] {
             let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(id))
             column.title = title

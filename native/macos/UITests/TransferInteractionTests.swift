@@ -10,7 +10,8 @@ final class TransferInteractionTests: XCTestCase {
             app.openNativeWindow()
             guard app.tables["local-file-list"].waitForExistence(timeout: 20) else { return XCTFail("The native file table did not appear") }
             let count = app.staticTexts["local-selection-status"]
-            let loaded = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@ OR label == %@", "1000 items", "1000 items"), object: count)
+            let counts = ["1000 items", "1,000 items"]
+            let loaded = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value IN %@ OR label IN %@", counts, counts), object: count)
             XCTAssertEqual(XCTWaiter.wait(for: [loaded], timeout: 5), .completed)
             let capture = XCTAttachment(screenshot: app.windows.firstMatch.screenshot())
             capture.name = "Native-\(appearance)-880x640"

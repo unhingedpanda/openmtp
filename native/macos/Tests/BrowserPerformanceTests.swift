@@ -34,7 +34,10 @@ final class BrowserPerformanceTests: XCTestCase {
         for action in 0..<100 {
             let started = ContinuousClock.now
             if action.isMultiple(of: 2) { table.selectRowIndexes(IndexSet(integer: action * 31), byExtendingSelection: false) }
-            else { table.moveDown(nil) }
+            else {
+                let event = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil, characters: "\u{F701}", charactersIgnoringModifiers: "\u{F701}", isARepeat: false, keyCode: 125))
+                table.keyDown(with: event)
+            }
             host.layoutSubtreeIfNeeded()
             table.displayIfNeeded()
             let elapsed = started.duration(to: .now).components
@@ -43,7 +46,7 @@ final class BrowserPerformanceTests: XCTestCase {
         }
         let p95 = samples.sorted()[94]
         let result: [String: Any] = ["entries": 10000, "actions": 100, "p95_ms": p95, "samples_ms": samples,
-            "method": "In-process AppKit selection and moveDown keyboard action with layout/display updates. Hidden 800x600 window. Debug test build. Does not measure physical input-to-screen latency."]
+            "method": "In-process AppKit selection and Down Arrow keyDown events with layout/display updates. Hidden 800x600 window. Debug test build. Does not measure physical input-to-screen latency."]
         let output = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("build/browser-performance.json")
         try JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]).write(to: output)
         XCTAssertLessThanOrEqual(p95, 100)

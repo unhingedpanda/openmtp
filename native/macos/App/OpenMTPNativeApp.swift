@@ -7,12 +7,19 @@ import AppKit
     var body: some Scene {
         WindowGroup("OpenMTP Native") {
             MainBrowserView(model: model)
+                .preferredColorScheme(launchColorScheme)
                 .frame(minWidth: 880, minHeight: 640)
                 .task { lifecycle.model = model; await model.start() }
         }
+        .defaultLaunchBehavior(.presented)
         .defaultSize(width: 1100, height: 740)
         .commands { AppCommands(model: model) }
         Settings { SettingsView(preferences: model.preferences) }
+    }
+    private var launchColorScheme: ColorScheme? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "--appearance"), arguments.indices.contains(index + 1) else { return nil }
+        return arguments[index + 1] == "dark" ? .dark : .light
     }
 }
 
@@ -31,7 +38,7 @@ struct MainBrowserView: View {
                     Button { Task { await model.activePane.refresh() } } label: { Label("Refresh", systemImage: "arrow.clockwise") }
                         .help("Refresh (⌘R)")
                 }
-                
+
                 ToolbarItem(placement: .primaryAction) {
                     Button { model.requestNewFolder() } label: { Label("New Folder", systemImage: "folder.badge.plus") }
                         .disabled(!model.canActOnPane)
@@ -97,10 +104,12 @@ struct WindowConfiguration: NSViewRepresentable {
             let arguments = ProcessInfo.processInfo.arguments
             let testing = arguments.contains("--ui-testing")
             window?.setFrameAutosaveName(testing ? "OpenMTPNativeTestWindow" : "OpenMTPNativeMainWindow")
-            if let index = arguments.firstIndex(of: "--appearance"), arguments.indices.contains(index + 1) {
-                window?.appearance = NSAppearance(named: arguments[index + 1] == "dark" ? .darkAqua : .aqua)
+            if arguments.contains("--narrow"), let window {
+                DispatchQueue.main.async { [weak window] in
+                    window?.setContentSize(NSSize(width: 880, height: 640))
+                    window?.center()
+                }
             }
-            if arguments.contains("--narrow") { window?.setContentSize(NSSize(width: 880, height: 640)) }
             window?.toolbarStyle = .unified
             closeProxy.model = model
             if let window, window.delegate !== closeProxy {

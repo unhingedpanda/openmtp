@@ -43,7 +43,7 @@ class OwnedApplication:
         if self.poll() is None:
             os.kill(self.pid, signal.SIGKILL)
 
-    def wait(self, timeout):
+    def wait(self, timeout=5):
         deadline = time.monotonic() + timeout
         while self.poll() is None:
             if time.monotonic() >= deadline:
@@ -51,23 +51,28 @@ class OwnedApplication:
             time.sleep(0.01)
 
 def launch():
-    started = time.perf_counter()
     a.output.parent.mkdir(parents=True, exist_ok=True)
-    pid_file = a.output.with_suffix('.pid')
-    with a.output.with_suffix('.launch.log').open('a') as log:
-        subprocess.run([str(probe), '--launch', str(app), str(pid_file), '--ui-testing', '--directory', str(a.fixture.resolve())], stdout=subprocess.DEVNULL, stderr=log, check=True, timeout=12)
-    process = OwnedApplication(int(pid_file.read_text()))
-    pid_file.unlink()
+    report_file = a.output.with_suffix('.launch.json')
+    report_file.unlink(missing_ok=True)
+    process = None
     try:
-        subprocess.run([str(probe), str(process.pid)], check=True, timeout=12, stdout=subprocess.DEVNULL)
+        with a.output.with_suffix('.launch.log').open('a') as log:
+            subprocess.run([str(probe), '--launch', str(app), str(report_file), '--ui-testing', '--directory', str(a.fixture.resolve())], stdout=subprocess.DEVNULL, stderr=log, check=True, timeout=25)
+        report = json.loads(report_file.read_text())
+        process = OwnedApplication(report['pid'])
+        if report['first_window_seconds'] is None:
+            raise RuntimeError(f"Preview did not present its first window: {report}")
     except BaseException:
-        try:
-            subprocess.run(['sample', str(process.pid), '1', '-file', str(a.output.with_suffix('.sample.txt'))], capture_output=True, timeout=5)
-        except subprocess.TimeoutExpired:
-            pass
-        stop(process)
+        if process is None and report_file.exists():
+            process = OwnedApplication(json.loads(report_file.read_text())['pid'])
+        if process is not None:
+            try:
+                subprocess.run(['sample', str(process.pid), '1', '-file', str(a.output.with_suffix('.sample.txt'))], capture_output=True, timeout=5)
+            except subprocess.TimeoutExpired:
+                pass
+            stop(process)
         raise
-    return process, time.perf_counter() - started
+    return process, report['first_window_seconds']
 
 def stop(process):
     process.terminate()
@@ -127,7 +132,7 @@ result = {
     'median_warm_window_seconds': median, 'rss_mib_at_30_seconds': rss,
     'idle_cpu_one_core_percent': cpu, 'cpu_sample_seconds': sample_elapsed, 'owned_pids': pids,
     'passes': {'warm_window_at_most_0_75_seconds': median <= 0.75, 'rss_at_most_150_mib': rss <= 150, 'cpu_at_most_1_percent': cpu <= 1},
-    'method': 'NSWorkspace app-bundle launches with a new owned instance. First on-screen window via CoreGraphics. Summed ps RSS and process CPU time. One cache-prime launch excluded.',
+    'method': 'Monotonic timer immediately before NSWorkspace launch request to first owned on-screen window via CoreGraphics. Observer process startup excluded. New owned app instance each launch. Summed ps RSS and process CPU time. One cache-prime launch excluded.',
 }
 a.output.parent.mkdir(parents=True, exist_ok=True)
 a.output.write_text(json.dumps(result, indent=2) + '\n')
